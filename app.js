@@ -8,16 +8,18 @@ mongoose.connect('mongodb://localhost/mana_sleuth');
 
 // Define schemas
 var Schema = mongoose.Schema;
+
 var schemas = {
   Multipart: new Schema({
     cards: [Schema.ObjectId],
     type: String //flip, split, double-faced
   }),
+  
   Card: new Schema({
     name: String,
     power: {type: String, match: /^\d+|\*$/},
     toughness: {type: String, match: /^\d+|\*$/},
-    cost: {string: String},
+    cost: {string: String, cmc: Number},
     colours: [String],
     rules: String,
     multipart: Schema.ObjectId,
@@ -128,6 +130,7 @@ var app = {
       jsdom.env(body, function (err, window) {
         var $ = jquery.create(window);
         var cards = $(".cardItem");
+        
         cards.each(function() {
           var $card = $(this)
           var card = {
@@ -140,7 +143,7 @@ var app = {
               .map(function(c) { return colours[c]; })
               .filter(function(c) { return c; })
           };
-          if (artist.match(/^\s*$/)) delete card.artist;
+          if (card.artist.match(/^\s*$/)) delete card.artist;
           models.Card.sync(card);
         });
         console.log("Found "+cards.length+" cards");
@@ -150,22 +153,53 @@ var app = {
   
   updateCards: function() {
     console.log("Updating cards");
-    models.Card.updatable(1, function(cards) {
+    
+    models.Card.updatable(20, function(cards) {
+      var i = 0;
       cards.map(function(card) {
-        var uri = gatherer.card('details', card.gathererId);
-        request({uri: uri}, function (error, response, body) {
-          jsdom.env(body, function (err, window) {
-            var $ = jquery.create(window);
-            $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
-            
-          });
-        });
+        setTimeout(function() {
+            var uri = gatherer.card('details', card.gathererId);
+            request({uri: uri}, function (error, response, body) {
+              jsdom.env(body, function (err, window) {
+                var $ = jquery.create(window);
+                $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
+                
+                var rows = $(".cardDetails .rightCol .row");
+                
+                var filterer = function(rows, search, negativeSearch) {
+                    return rows.filter(function() {
+                        var text = $(this).find(".label").text();
+                        return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
+                    }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
+                };
+                
+                var details = {
+                    gathererId: card.gathererId,
+                    lastUpdated: new Date(),
+                    name: filterer(rows, /name/i),
+                    cost: {
+                        string: filterer(rows, /mana cost/i, /converted mana cost/i),
+                        cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
+                    },
+                    rules: filterer(rows, /text|rules/i),
+                    artist: filterer(rows, /artist/i)
+                    //types: filterer(rows, /types/i),
+                    //expansion: filterer(rows, /expansion/i),
+                    //rarity: filterer(rows, /rarity/i),
+                }
+                
+                card.set(details);
+                card.save();
+              });
+            });
+        }, i * 3000);
+        i++;
       });
     });
   }
 };
 
 scheduler.every('2 days', 'findCards', app.findCards);
-scheduler.every('30 minutes', 'updateCards', app.updateCards);
+scheduler.every('2 minutes', 'updateCards', app.updateCards);
 
 app.updateCards();
