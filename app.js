@@ -137,9 +137,10 @@ var app = {
     request({uri: gatherer.cards()}, function (error, response, body) {
       jsdom.env(body, function (err, window) {
         var $ = jquery.create(window);
-        var cards = $(".cardItem");
-        chain(cards, function(elem, success) {
-          var $card = $(elem);
+        
+        var cards = {};
+        $(".cardItem").each(function() {
+          var $card = $(this);
           var card = {
             lastUpdated: new Date(),
             gathererId: $card.find(".nameLink").attr("href")
@@ -151,14 +152,19 @@ var app = {
               .filter(function(c) { return c; })
           };
           if (card.artist.match(/^\s*$/)) delete card.artist;
-          models.Card.sync(card);
-          success();
+          cards[card.gathererId] = jquery.extend(cards[card.gathererId] || {}, card);
         });
-        console.log("Found "+cards.length+" cards");
+
+        var i = 0;
+        for (id in cards) {
+            models.Card.sync(cards[id]);
+            i++;
+        }
+        console.log("Found "+i+" cards");
       });
     });
   },
-  
+
   updateCards: function() {
     console.log("Updating cards");
     
@@ -208,8 +214,8 @@ var app = {
   }
 };
 
-scheduler.every('2 days', 'findCards', app.findCards);
-scheduler.every('2 minutes', 'updateCards', app.updateCards);
+// scheduler.every('2 days', 'findCards', app.findCards);
+// scheduler.every('2 minutes', 'updateCards', app.updateCards);
 
 app.findCards();
 // app.updateCards();
