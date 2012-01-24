@@ -56,7 +56,7 @@ models.Card.updatable = function(number, fn) {
   });
 };
 
-//Time units
+// Time units
 units = [];
 units.second = 1000;
 units.minute = 60 * units.second;
@@ -64,7 +64,7 @@ units.hour = 60 * units.minute;
 units.day = 24 * units.hour;
 units.week = 7 * units.day;
 
-//Schedules tasks
+// Schedules tasks
 var scheduler = {
   units: units,
   tasks: {},
@@ -121,6 +121,14 @@ var fixtures = {
 // Colours of magic
 var colours = {Green: 'G', Black: 'B', Blue: 'U', Red: 'R', White: 'W'};
 
+// Runs a function with asynchronous behaviour on a set of items one at a time
+var chain = function(items, fn, i) {
+  i = i || 0;
+  fn(items[i], function() {
+    if (i + 1 < items.length) chain(items, fn, i + 1);
+  });
+}
+
 // App functionality
 var app = {
   findCards: function() {
@@ -130,9 +138,8 @@ var app = {
       jsdom.env(body, function (err, window) {
         var $ = jquery.create(window);
         var cards = $(".cardItem");
-        
-        cards.each(function() {
-          var $card = $(this)
+        chain(cards, function(elem, success) {
+          var $card = $(elem);
           var card = {
             lastUpdated: new Date(),
             gathererId: $card.find(".nameLink").attr("href")
@@ -145,6 +152,7 @@ var app = {
           };
           if (card.artist.match(/^\s*$/)) delete card.artist;
           models.Card.sync(card);
+          success();
         });
         console.log("Found "+cards.length+" cards");
       });
@@ -156,44 +164,45 @@ var app = {
     
     models.Card.updatable(20, function(cards) {
       var i = 0;
-      cards.map(function(card) {
+      chain(cards, function(card, success) {
         setTimeout(function() {
-            var uri = gatherer.card('details', card.gathererId);
-            request({uri: uri}, function (error, response, body) {
-              jsdom.env(body, function (err, window) {
-                var $ = jquery.create(window);
-                $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
-                
-                var rows = $(".cardDetails .rightCol .row");
-                
-                var filterer = function(rows, search, negativeSearch) {
-                    return rows.filter(function() {
-                        var text = $(this).find(".label").text();
-                        return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
-                    }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
-                };
-                
-                var details = {
-                    gathererId: card.gathererId,
-                    lastUpdated: new Date(),
-                    name: filterer(rows, /name/i),
-                    cost: {
-                        string: filterer(rows, /mana cost/i, /converted mana cost/i),
-                        cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
-                    },
-                    rules: filterer(rows, /text|rules/i),
-                    artist: filterer(rows, /artist/i)
-                    //types: filterer(rows, /types/i),
-                    //expansion: filterer(rows, /expansion/i),
-                    //rarity: filterer(rows, /rarity/i),
-                }
-                
-                card.set(details);
-                card.save();
-              });
+          var uri = gatherer.card('details', card.gathererId);
+          request({uri: uri}, function (error, response, body) {
+            jsdom.env(body, function (err, window) {
+              var $ = jquery.create(window);
+              $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
+              
+              var rows = $(".cardDetails .rightCol .row");
+              
+              var filterer = function(rows, search, negativeSearch) {
+                  return rows.filter(function() {
+                      var text = $(this).find(".label").text();
+                      return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
+                  }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
+              };
+              
+              var details = {
+                  gathererId: card.gathererId,
+                  lastUpdated: new Date(),
+                  name: filterer(rows, /name/i),
+                  cost: {
+                      string: filterer(rows, /mana cost/i, /converted mana cost/i),
+                      cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
+                  },
+                  rules: filterer(rows, /text|rules/i),
+                  artist: filterer(rows, /artist/i)
+                  //types: filterer(rows, /types/i),
+                  //expansion: filterer(rows, /expansion/i),
+                  //rarity: filterer(rows, /rarity/i),
+              }
+              card.set(details);
+              card.save();
+              
+              console.log(card.name);
+              success();
             });
-        }, i * 3000);
-        i++;
+          });
+        }, Math.random() * 1000); 
       });
     });
   }
@@ -202,4 +211,5 @@ var app = {
 scheduler.every('2 days', 'findCards', app.findCards);
 scheduler.every('2 minutes', 'updateCards', app.updateCards);
 
-app.updateCards();
+app.findCards();
+// app.updateCards();
