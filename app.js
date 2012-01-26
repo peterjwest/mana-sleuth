@@ -168,7 +168,7 @@ var app = {
   updateCards: function() {
     console.log("Updating cards");
     
-    models.Card.updatable(20, function(cards) {
+    models.Card.updatable(1, function(cards) {
       var i = 0;
       chain(cards, function(card, success) {
         setTimeout(function() {
@@ -187,6 +187,7 @@ var app = {
                   }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
               };
               
+              var powerToughness = filterer(rows, /P\/T/i).split(/\s*\/\s*/);
               var details = {
                   gathererId: card.gathererId,
                   lastUpdated: new Date(),
@@ -196,8 +197,11 @@ var app = {
                       cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
                   },
                   rules: filterer(rows, /text|rules/i),
+                  original: 
                   artist: filterer(rows, /artist/i)
-                  //types: filterer(rows, /types/i),
+                  power: powerToughness[0] || '',
+                  toughness: powerToughness[1] || '',
+                  types: filterer(rows, /types/i),
                   //expansion: filterer(rows, /expansion/i),
                   //rarity: filterer(rows, /rarity/i),
               }
@@ -217,5 +221,5 @@ var app = {
 // scheduler.every('2 days', 'findCards', app.findCards);
 // scheduler.every('2 minutes', 'updateCards', app.updateCards);
 
-app.findCards();
-// app.updateCards();
+// app.findCards();
+app.updateCards();
