@@ -12,7 +12,7 @@ var Schema = mongoose.Schema;
 var schemas = {
   Multipart: new Schema({
     cards: [Schema.ObjectId],
-    type: String //flip, split, double-faced
+    type: {type: String, match: /^flip|split|transform$/}
   }),
   
   Card: new Schema({
@@ -95,10 +95,11 @@ var scheduler = {
 var gatherer = {
   domain: 'http://gatherer.wizards.com',
   paths: {
-    cards: '/Pages/Search/Default.aspx',
-    details: '/Pages/Card/Details.aspx',
-    sets: '/Pages/Card/Printings.aspx',
-    image: '/Handlers/Image.ashx'
+    cards: '/Pages/Search/Default.aspx?',
+    details: '/Pages/Card/Details.aspx?',
+    original: '/Pages/Card/Details.aspx?printed=true&'
+    sets: '/Pages/Card/Printings.aspx?',
+    image: '/Handlers/Image.ashx?'
   },
   cards: function() {
     return this.domain+this.paths.cards+'?output=checklist&text=+[]';
@@ -107,7 +108,7 @@ var gatherer = {
     if (!this.paths[type]) throw "Cannot find card resource type";
     var imageType = (type == 'image' ? '&type=card' : '');
     var queryString = 'multiverseid='+id+imageType+(query ? '&'+query : '');
-    return this.domain+this.paths[type]+'?'+queryString;
+    return this.domain+this.paths[type]+queryString;
   }
 };
 
@@ -129,90 +130,99 @@ var chain = function(items, fn, i) {
   });
 }
 
+// Gets a random number between a min and max
+var between = function(min, max) { return Math.random()*(max - min) + min };
+
+// Runs a callback after a set amount of time
+var after = function(time, fn) { setTimeout(fn, time); };
+
+// Gets the response of page and gives it to the callback function
+var requestPage = function(uri, fn) {
+  request({uri: uri}, function (error, response, body) {
+    jsdom.env(body, function (err, window) {
+      fn(jquery.create(window));
+    });
+  });
+};
+
 // App functionality
 var app = {
   findCards: function() {
     console.log("Finding new cards");
-    
-    request({uri: gatherer.cards()}, function (error, response, body) {
-      jsdom.env(body, function (err, window) {
-        var $ = jquery.create(window);
-        
-        var cards = {};
-        $(".cardItem").each(function() {
-          var $card = $(this);
-          var card = {
-            lastUpdated: new Date(),
-            gathererId: $card.find(".nameLink").attr("href")
-              .match(/multiverseid=(\d+)/i)[1],
-            name: $card.find(".name").text(),
-            artist: $card.find(".artist").text(),
-            colours: $card.find(".color").text().split("/")
-              .map(function(c) { return colours[c]; })
-              .filter(function(c) { return c; })
-          };
-          if (card.artist.match(/^\s*$/)) delete card.artist;
-          cards[card.gathererId] = jquery.extend(cards[card.gathererId] || {}, card);
-        });
-
-        var i = 0;
-        for (id in cards) {
-            models.Card.sync(cards[id]);
-            i++;
-        }
-        console.log("Found "+i+" cards");
+    requestPage(gatherer.cards(), function($) {
+      var cards = {};
+      $(".cardItem").each(function() {
+        var $card = $(this);
+        var card = {
+          lastUpdated: new Date(),
+          gathererId: $card.find(".nameLink").attr("href")
+            .match(/multiverseid=(\d+)/i)[1],
+          name: $card.find(".name").text(),
+          artist: $card.find(".artist").text(),
+          colours: $card.find(".color").text().split("/")
+            .map(function(c) { return colours[c]; })
+            .filter(function(c) { return c; })
+        };
+        if (card.artist.match(/^\s*$/)) delete card.artist;
+        cards[card.gathererId] = jquery.extend(cards[card.gathererId] || {}, card);
       });
-    });
+
+      var i = 0;
+      for (id in cards) {
+          models.Card.sync(cards[id]);
+          i++;
+      }
+      console.log("Found "+i+" cards");
+    });  
   },
 
   updateCards: function() {
     console.log("Updating cards");
-    
     models.Card.updatable(1, function(cards) {
       var i = 0;
       chain(cards, function(card, success) {
-        setTimeout(function() {
-          var uri = gatherer.card('details', card.gathererId);
-          request({uri: uri}, function (error, response, body) {
-            jsdom.env(body, function (err, window) {
-              var $ = jquery.create(window);
-              $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
-              
-              var rows = $(".cardDetails .rightCol .row");
-              
-              var filterer = function(rows, search, negativeSearch) {
-                  return rows.filter(function() {
-                      var text = $(this).find(".label").text();
-                      return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
-                  }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
-              };
-              
-              var powerToughness = filterer(rows, /P\/T/i).split(/\s*\/\s*/);
-              var details = {
-                  gathererId: card.gathererId,
-                  lastUpdated: new Date(),
-                  name: filterer(rows, /name/i),
-                  cost: {
-                      string: filterer(rows, /mana cost/i, /converted mana cost/i),
-                      cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
-                  },
-                  rules: filterer(rows, /text|rules/i),
-                  original: 
-                  artist: filterer(rows, /artist/i)
-                  power: powerToughness[0] || '',
-                  toughness: powerToughness[1] || '',
-                  types: filterer(rows, /types/i),
-                  //expansion: filterer(rows, /expansion/i),
-                  //rarity: filterer(rows, /rarity/i),
-              }
-              card.set(details);
-              card.save();
-              
-              console.log(card.name);
-              success();
+        after(between(300, 600), function() {
+          requestPage(gatherer.card('details', card.gathererId), function($) {
+            $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
+            
+            var rows = $(".cardDetails .rightCol .row");
+            
+            var filterer = function(rows, search, negativeSearch) {
+                return rows.filter(function() {
+                    var text = $(this).find(".label").text();
+                    return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
+                }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
+            };
+            
+            var powerToughness = filterer(rows, /P\/T/i).split(/\s*\/\s*/);
+            var details = {
+                gathererId: card.gathererId,
+                lastUpdated: new Date(),
+                name: filterer(rows, /name/i),
+                cost: {
+                    string: filterer(rows, /mana cost/i, /converted mana cost/i),
+                    cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
+                },
+                rules: filterer(rows, /text|rules/i),
+                artist: filterer(rows, /artist/i)
+                power: powerToughness[0] || '',
+                toughness: powerToughness[1] || '',
+                types: filterer(rows, /types/i)
+            };
+            
+            after(between(300, 600), function() {
+              requestPage(gatherer.card('sets', card.gathererId), function($) {
+                var printings = $(".cardList:first .cardItems");
+                var formats = $(".cardList:last .cardItems");
+                
+                card.set(details);
+                card.save();
+                
+                success();
+              });
             });
           });
-        }, Math.random() * 1000); 
+        }); 
       });
     });
   }
