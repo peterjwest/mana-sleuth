@@ -10,15 +10,10 @@ mongoose.connect('mongodb://localhost/mana_sleuth');
 var Schema = mongoose.Schema;
 
 var schemas = {
-  Multipart: new Schema({
-    cards: [Schema.ObjectId],
-    type: {type: String, match: /^flip|split|transform$/}
-  }),
-  
   Card: new Schema({
     name: String,
-    power: {type: String, match: /^\d+|\*$/},
-    toughness: {type: String, match: /^\d+|\*$/},
+    power: {type: String, match: /^\d*|\*$/},
+    toughness: {type: String, match: /^\d*|\*$/},
     cost: {string: String, cmc: Number},
     colours: [String],
     rules: String,
@@ -28,25 +23,41 @@ var schemas = {
     lastUpdated: Date,
     flavourText: String,
     artist: String
-    //expansions, formats, types
+  }),
+  
+  Multipart: new Schema({
+    cards: [Schema.ObjectId],
+    type: {type: String, match: /^flip|split|transform$/}
+  }),
+  
+  Printings: new Schema({
+    name: String,
+    cardId: Schema.ObjectId,
+    setId: Schema.ObjectId
+  }),
+  
+  Set: new Schema({
+    name: String,
+    blockId: Schema.ObjectId
   })
+};
+
+// Sync method for adding/updating models
+var sync = function(criteria, details) {
+  var Card = this;
+  Card.findOne(criteria, function(err, card) { 
+    if (!card) card = new Card();
+    card.set(details);
+    card.save();
+  });
 };
 
 // Define models
 var models = {};
 for (i in schemas) {
   models[i] = mongoose.model(i, schemas[i]);
+  models[i].sync = sync;
 }
-
-// Sync method for adding/updating cards
-models.Card.sync = function(details) {
-  var Card = this;
-  Card.findOne({gathererId: details.gathererId}, function(err, card) { 
-    if (!card) card = new Card();
-    card.set(details);
-    card.save();
-  });
-};
 
 // Method to find cards which need updating
 models.Card.updatable = function(number, fn) {
@@ -97,7 +108,7 @@ var gatherer = {
   paths: {
     cards: '/Pages/Search/Default.aspx?',
     details: '/Pages/Card/Details.aspx?',
-    original: '/Pages/Card/Details.aspx?printed=true&'
+    original: '/Pages/Card/Details.aspx?printed=true&',
     sets: '/Pages/Card/Printings.aspx?',
     image: '/Handlers/Image.ashx?'
   },
@@ -169,7 +180,7 @@ var app = {
 
       var i = 0;
       for (id in cards) {
-          models.Card.sync(cards[id]);
+          models.Card.sync({gathererId: id}, cards[id]);
           i++;
       }
       console.log("Found "+i+" cards");
@@ -204,7 +215,7 @@ var app = {
                     cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
                 },
                 rules: filterer(rows, /text|rules/i),
-                artist: filterer(rows, /artist/i)
+                artist: filterer(rows, /artist/i),
                 power: powerToughness[0] || '',
                 toughness: powerToughness[1] || '',
                 types: filterer(rows, /types/i)
@@ -212,8 +223,16 @@ var app = {
             
             after(between(300, 600), function() {
               requestPage(gatherer.card('sets', card.gathererId), function($) {
-                var printings = $(".cardList:first .cardItems");
-                var formats = $(".cardList:last .cardItems");
+                var printings = $(".cardList:first .cardItem");
+                var formats = $(".cardList:last .cardItem");
+                
+                var printFields = {};
+                $(".cardList:first tr.headerRow td").each(function() {
+                    var field = $(this).text().replace(/^\s+|\s+$/g, "")
+                    printFields[field] = $(this).prevAll().length;
+                });
+                
+                console.log(printFields);
                 
                 card.set(details);
                 card.save();
@@ -222,7 +241,7 @@ var app = {
               });
             });
           });
-        }); 
+        });
       });
     });
   }
