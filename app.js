@@ -251,4 +251,31 @@ var app = {
 // scheduler.every('2 minutes', 'updateCards', app.updateCards);
 
 // app.findCards();
-app.updateCards();
+//app.updateCards();
+
+var promised = function(work) {
+    var createPromise = function() {
+        var promise = {fulfill: function() { console.log("no-op"); }};
+        promise.then = function(succeeded, errored) {
+            var newPromise = createPromise();
+            promise.fulfill = function(success) {
+                if (arguments.length == 0 || success) succeeded(newPromise.fulfill);
+                else if (errored) errored();
+            };
+            return newPromise;
+        };
+        return promise;
+    };
+    
+    var promise = createPromise();
+    work(function(success) { promise.fulfill(success); });
+    return promise;
+}
+
+promised(function(success) {
+    console.log("starting");
+    setTimeout(function() { success("foo"); }, 500);
+})
+.then(function(success) { console.log("done"); success(); })
+.then(function(success) { console.log("re-done"); success(); })
+.then(function(success) { console.log("re-re-done"); }, function() { console.log("oh no!"); });
