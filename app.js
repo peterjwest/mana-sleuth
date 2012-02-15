@@ -255,7 +255,7 @@ var app = {
 
 var promised = function(work) {
     var createPromise = function() {
-        var promise = {fulfill: function() { console.log("no-op"); }};
+        var promise = {fulfill: function() {}};
         promise.then = function(succeeded, errored) {
             var newPromise = createPromise();
             promise.fulfill = function(success) {
