@@ -274,7 +274,7 @@ var promised = function(work) {
 
 promised(function(success) {
     console.log("starting");
-    setTimeout(function() { success("foo"); }, 500);
+    setTimeout(function() { success(); }, 500);
 })
 .then(function(success) { console.log("done"); success(); })
 .then(function(success) { console.log("re-done"); success(); })
