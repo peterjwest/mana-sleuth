@@ -136,7 +136,7 @@ var colours = {Green: 'G', Black: 'B', Blue: 'U', Red: 'R', White: 'W'};
 // Runs a function in a promise interface
 var promise = function(fn) {
   var create = function() {
-    var promise = {next: {success: function() {}, fail: function() {} }};
+    var promise = {next: {success: function() { }, fail: function() {} }};
     promise.then = function(success, fail) {
       var newPromise = create();
       promise.next = {
@@ -156,17 +156,21 @@ var promise = function(fn) {
   return promise;
 }
 
-// Runs a function with asynchronous behaviour on a set of items one at a time
+// Runs a function with asynchronous behaviour on an array of items
 var chain = function(items, fn) {
-  var iterate = function(fn, i) {
-    if (i < items.length) {
-      fn({ 
-        'continue': function() { iterate(fn, i + 1) },
-        'break': function() {}
-      }, items[i]);
-    }
-  };
-  iterate(fn,  0);
+  return promise(function(next) {
+    var iterate = function(fn, i) {
+      if (i < items.length) {
+        fn({ 
+          'continue': function() { iterate(fn, i + 1) },
+          'break': function() { next.success(i); }
+        }, items[i]);
+      }
+      else { next.success(i); }
+    };
+  
+    iterate(fn, 0);
+  });
 }
 
 // Gets a random number between a min and max
@@ -286,4 +290,10 @@ var app = {
 // .then(function(next) { console.log("re-done"); next.success(); })
 // .then(function(next) { console.log("re-re-done"); }, function() { console.log("oh no!"); });
 
-chain([1,2,3,4,5,6], function(next, item) { console.log(item); if (item < 4) next.continue(); });
+chain([1,2,3,4,5,6], function(next, item) {
+  setTimeout(function() {
+    console.log(item); 
+    if (item == 4) return next.break();
+    next.continue();
+  }, 10);
+}).then(function(next, i) { console.log("done"); });
