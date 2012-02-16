@@ -133,12 +133,40 @@ var fixtures = {
 // Colours of magic
 var colours = {Green: 'G', Black: 'B', Blue: 'U', Red: 'R', White: 'W'};
 
-// Runs a function with asynchronous behaviour on a set of items one at a time
-var chain = function(items, fn, i) {
-  i = i || 0;
-  fn(items[i], function() {
-    if (i + 1 < items.length) chain(items, fn, i + 1);
+// Runs a function in a promise interface
+var promise = function(fn) {
+  var create = function() {
+    var promise = {next: {success: function() {}, fail: function() {} }};
+    promise.then = function(success, fail) {
+      var newPromise = create();
+      promise.next = {
+        success: function() { success.apply(this, [newPromise.next].concat(arguments)); },
+        fail: fail
+      };
+      return newPromise;
+    };
+    return promise;
+  };
+  
+  var promise = create();
+  fn({ 
+    success: function() { promise.next.success(arguments); },
+    fail: function() { promise.next.fail(arguments); }
   });
+  return promise;
+}
+
+// Runs a function with asynchronous behaviour on a set of items one at a time
+var chain = function(items, fn) {
+  var iterate = function(fn, i) {
+    if (i < items.length) {
+      fn({ 
+        'continue': function() { iterate(fn, i + 1) },
+        'break': function() {}
+      }, items[i]);
+    }
+  };
+  iterate(fn,  0);
 }
 
 // Gets a random number between a min and max
@@ -251,31 +279,11 @@ var app = {
 // scheduler.every('2 minutes', 'updateCards', app.updateCards);
 
 // app.findCards();
-//app.updateCards();
+// app.updateCards();
 
-var promised = function(work) {
-    var createPromise = function() {
-        var promise = {fulfill: function() {}};
-        promise.then = function(succeeded, errored) {
-            var newPromise = createPromise();
-            promise.fulfill = function(success) {
-                if (arguments.length == 0 || success) succeeded(newPromise.fulfill);
-                else if (errored) errored();
-            };
-            return newPromise;
-        };
-        return promise;
-    };
-    
-    var promise = createPromise();
-    work(function(success) { promise.fulfill(success); });
-    return promise;
-}
+// promise(function(next) { console.log("starting"); setTimeout(function() { next.success(); }, 500); })
+// .then(function(next) { console.log("done"); next.success(); })
+// .then(function(next) { console.log("re-done"); next.success(); })
+// .then(function(next) { console.log("re-re-done"); }, function() { console.log("oh no!"); });
 
-promised(function(success) {
-    console.log("starting");
-    setTimeout(function() { success(); }, 500);
-})
-.then(function(success) { console.log("done"); success(); })
-.then(function(success) { console.log("re-done"); success(); })
-.then(function(success) { console.log("re-re-done"); }, function() { console.log("oh no!"); });
+chain([1,2,3,4,5,6], function(next, item) { console.log(item); if (item < 4) next.continue(); });
