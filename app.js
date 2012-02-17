@@ -133,6 +133,12 @@ var fixtures = {
 // Colours of magic
 var colours = {Green: 'G', Black: 'B', Blue: 'U', Red: 'R', White: 'W'};
 
+var toArray = function(obj) {
+    var i, array = [];
+    for (i = 0; i < obj.length; i++) array.push(obj[i]);
+    return array;
+}
+
 // Runs a function in a promise interface
 var promise = function(fn) {
   var create = function() {
@@ -140,7 +146,9 @@ var promise = function(fn) {
     promise.then = function(success, fail) {
       var newPromise = create();
       promise.next = {
-        success: function() { success.apply(this, [newPromise.next].concat(arguments)); },
+        success: function() {
+            success.apply(this, [newPromise.next].concat([].slice.call(arguments)));
+        },
         fail: fail
       };
       return newPromise;
@@ -150,8 +158,8 @@ var promise = function(fn) {
   
   var promise = create();
   fn({ 
-    success: function() { promise.next.success(arguments); },
-    fail: function() { promise.next.fail(arguments); }
+    success: function() { promise.next.success.apply(this, arguments); },
+    fail: function() { promise.next.fail.apply(this, arguments); }
   });
   return promise;
 }
@@ -163,7 +171,7 @@ var chain = function(items, fn) {
       if (i < items.length) {
         fn({ 
           'continue': function() { iterate(fn, i + 1) },
-          'break': function() { next.success(i); }
+          'break': function() { next.success(i + 1); }
         }, items[i]);
       }
       else { next.success(i); }
@@ -171,7 +179,7 @@ var chain = function(items, fn) {
   
     iterate(fn, 0);
   });
-}
+};
 
 // Gets a random number between a min and max
 var between = function(min, max) { return Math.random()*(max - min) + min };
@@ -296,4 +304,12 @@ chain([1,2,3,4,5,6], function(next, item) {
     if (item == 4) return next.break();
     next.continue();
   }, 10);
-}).then(function(next, i) { console.log("done"); });
+}).then(function(next, i) { console.log("Final: "+i); });
+
+promise(function(next) {
+    setTimeout(function() {
+        next.success(1,2,3);
+    }, 50);
+}).then(function(next, a, b, c) {
+    console.log(a,b,c);
+});
