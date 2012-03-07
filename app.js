@@ -60,7 +60,7 @@ for (i in schemas) {
 }
 
 // Method to find cards which need updating
-models.Card.updatable = function(number, fn) {
+models.Card.lastUpdated = function(number, fn) {
   var Card = this;
   Card.find().asc('lastUpdated').limit(number).find(function(err, cards) {
     fn(cards);
@@ -139,48 +139,6 @@ var toArray = function(obj) {
     return array;
 }
 
-// Runs a function in a promise interface
-var promise = function(fn) {
-  var create = function() {
-    var promise = {next: {success: function() { }, fail: function() {} }};
-    promise.then = function(success, fail) {
-      var newPromise = create();
-      promise.next = {
-        success: function() {
-            success.apply(this, [newPromise.next].concat([].slice.call(arguments)));
-        },
-        fail: fail
-      };
-      return newPromise;
-    };
-    return promise;
-  };
-  
-  var promise = create();
-  fn({ 
-    success: function() { promise.next.success.apply(this, arguments); },
-    fail: function() { promise.next.fail.apply(this, arguments); }
-  });
-  return promise;
-}
-
-// Runs a function with asynchronous behaviour on an array of items
-var chain = function(items, fn) {
-  return promise(function(next) {
-    var iterate = function(fn, i) {
-      if (i < items.length) {
-        fn({ 
-          'continue': function() { iterate(fn, i + 1) },
-          'break': function() { next.success(i + 1); }
-        }, items[i]);
-      }
-      else { next.success(i); }
-    };
-  
-    iterate(fn, 0);
-  });
-};
-
 // Gets a random number between a min and max
 var between = function(min, max) { return Math.random()*(max - min) + min };
 
@@ -229,7 +187,7 @@ var app = {
 
   updateCards: function() {
     console.log("Updating cards");
-    models.Card.updatable(1, function(cards) {
+    models.Card.lastUpdated(1, function(cards) {
       var i = 0;
       chain(cards, function(card, success) {
         after(between(300, 600), function() {
@@ -293,23 +251,36 @@ var app = {
 // app.findCards();
 // app.updateCards();
 
-// promise(function(next) { console.log("starting"); setTimeout(function() { next.success(); }, 500); })
-// .then(function(next) { console.log("done"); next.success(); })
-// .then(function(next) { console.log("re-done"); next.success(); })
-// .then(function(next) { console.log("re-re-done"); }, function() { console.log("oh no!"); });
+var async = require('./async.js');
 
-chain([1,2,3,4,5,6], function(next, item) {
-  setTimeout(function() {
-    console.log(item); 
-    if (item == 4) return next.break();
-    next.continue();
-  }, 10);
-}).then(function(next, i) { console.log("Final: "+i); });
+// Runs a function with asynchronous behaviour on an array of items
+// async.chain([1,2,3,4,5,6], function(item) {
+  // var next = this.async(true);
+  // setTimeout(function() {
+    // console.log(item); 
+    // if (item == 4) return next.break();
+    // next.continue();
+  // }, 10);
+// }).then(function(i) { this.success(i+1); })
+// .then(function(i) { console.log(i); });
 
-promise(function(next) {
+// Runs a function with asynchronous behaviour on an array of items
+async.promise(function() {
+	var next = this;
     setTimeout(function() {
         next.success(1,2,3);
-    }, 50);
-}).then(function(next, a, b, c) {
-    console.log(a,b,c);
-});
+    }, 0);
+})
+.then(function(a, b, c) { return a + b + c; })
+.then(function(d) { return "The answer is "+d; })
+.then(function(d) {
+  var next = this.async();
+  next.success(d);
+})
+.then(function(e) {
+  var next = this.async();
+  setTimeout(function() { next.success(e.replace("is", "was")); }, 0);
+})
+.then(function(f) {
+  console.log(f);
+})
