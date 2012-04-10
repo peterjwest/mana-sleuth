@@ -4,6 +4,7 @@ var http = require('http');
 var jquery = require("jquery");
 var jsdom = require('jsdom');
 var mongoose = require('mongoose');
+var async = require('./async.js');
 mongoose.connect('mongodb://localhost/mana_sleuth');
 
 // Define schemas
@@ -24,18 +25,18 @@ var schemas = {
     flavourText: String,
     artist: String
   }),
-  
+
   Multipart: new Schema({
     cards: [Schema.ObjectId],
     type: {type: String, match: /^flip|split|transform$/}
   }),
-  
+
   Printings: new Schema({
     name: String,
     cardId: Schema.ObjectId,
     setId: Schema.ObjectId
   }),
-  
+
   Set: new Schema({
     name: String,
     blockId: Schema.ObjectId
@@ -43,12 +44,12 @@ var schemas = {
 };
 
 // Sync method for adding/updating models
-var sync = function(criteria, details) {
+var sync = function(criteria, details, success) {
   var Card = this;
-  Card.findOne(criteria, function(err, card) { 
+  Card.findOne(criteria, function(err, card) {
     if (!card) card = new Card();
     card.set(details);
-    card.save();
+    card.save(success);
   });
 };
 
@@ -75,28 +76,39 @@ units.hour = 60 * units.minute;
 units.day = 24 * units.hour;
 units.week = 7 * units.day;
 
+// Util
+var util = {
+  values: function(obj) {
+    var key, array = [];
+    for (key in obj) {
+      array.push(obj[key]);
+    }
+    return array;
+  }
+};
+
 // Schedules tasks
 var scheduler = {
   units: units,
   tasks: {},
-  
+
   decodeTime: function(string) {
     var time = string.split(/\s+/);
     var unit = time[1].replace(/s$/, "");
     if (!this.units[unit]) throw "Cannot determine unit of time";
     return parseInt(parseInt(time[0]) * this.units[unit]);
   },
-  
+
   every: function(time, name, fn) {
     var id = setInterval(fn, this.decodeTime(time));
     this.tasks[name] = {name: name, id: id, fn: fn};
   },
-  
+
   remove: function(name) {
     clearInterval(this.tasks[name].id);
     delete this.tasks[name];
   },
-  
+
   trigger: function(name) {
     this.tasks[name]();
   }
@@ -106,6 +118,7 @@ var scheduler = {
 var gatherer = {
   domain: 'http://gatherer.wizards.com',
   paths: {
+    advanced: '/Pages/Advanced.aspx?',
     cards: '/Pages/Search/Default.aspx?',
     details: '/Pages/Card/Details.aspx?',
     original: '/Pages/Card/Details.aspx?printed=true&',
@@ -113,13 +126,16 @@ var gatherer = {
     image: '/Handlers/Image.ashx?'
   },
   cards: function() {
-    return this.domain+this.paths.cards+'?output=checklist&text=+[]';
+    return this.domain+this.paths.cards+'output=checklist&color=|[W]|[U]|[R]|[G]|[C]|[B]';
   },
   card: function(type, id, query) {
     if (!this.paths[type]) throw "Cannot find card resource type";
     var imageType = (type == 'image' ? '&type=card' : '');
     var queryString = 'multiverseid='+id+imageType+(query ? '&'+query : '');
     return this.domain+this.paths[type]+queryString;
+  },
+  categories: function() {
+    return this.domain+this.paths.advanced;
   }
 };
 
@@ -156,9 +172,41 @@ var requestPage = function(uri, fn) {
 
 // App functionality
 var app = {
+  // This uses the advanced search page to get category names like set, block, format, rarity
+  updateCategories: function() {
+    requestPage(gatherer.categories(), function($) {
+      var filterer = function(items, search, negativeSearch) {
+        var match = items.filter(function() {
+          var text = $(this).find(".label2").text();
+          return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
+        }).first();
+
+        return match.find(".dynamicAutoComplete a").map(function() {
+          return $(this).text().replace(/^\s+|\s+$/g, "");
+        }).toArray();
+      };
+
+      var conditions = $(".advancedSearchTable tr");
+      //Can't use this method to get artist, since artists are pulled in with AJAX
+      var categories = {
+        sets: filterer(conditions, /set|expansion/i),
+        formats: filterer(conditions, /format/i),
+        block: filterer(conditions, /block/i),
+        types: filterer(conditions, /type/i, /subtype/i),
+        subtypes: filterer(conditions, /subtype/i),
+        rarity: filterer(conditions, /rarity/i),
+        mark: filterer(conditions, /mark/i)
+      };
+      console.log(categories);
+    });
+  },
+
+  // This uses the card search list view page to get basic details of each card
   findCards: function() {
+    var url = gatherer.cards()+"&subtype=+[merfolk]";
     console.log("Finding new cards");
-    requestPage(gatherer.cards(), function($) {
+    console.log(url);
+    requestPage(url, function($) {
       var cards = {};
       $(".cardItem").each(function() {
         var $card = $(this);
@@ -175,70 +223,76 @@ var app = {
         if (card.artist.match(/^\s*$/)) delete card.artist;
         cards[card.gathererId] = jquery.extend(cards[card.gathererId] || {}, card);
       });
+      cards = util.values(cards);
+      console.log(cards.length);
 
-      var i = 0;
-      for (id in cards) {
-          models.Card.sync({gathererId: id}, cards[id]);
-          i++;
-      }
-      console.log("Found "+i+" cards");
-    });  
+      async.map(cards, function(card) {
+        models.Card.sync({gathererId: card.gathererId}, card, this.success);
+        console.log("Updating "+card.name);
+      })
+      .then(function() {
+        console.log("Found "+cards.length+" cards");
+      });
+    });
   },
 
+  // This uses the card details and printings pages to get the full details of a card
   updateCards: function() {
     console.log("Updating cards");
     models.Card.lastUpdated(1, function(cards) {
-      var i = 0;
-      chain(cards, function(card, success) {
-        after(between(300, 600), function() {
-          requestPage(gatherer.card('details', card.gathererId), function($) {
-            $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
-            
-            var rows = $(".cardDetails .rightCol .row");
-            
-            var filterer = function(rows, search, negativeSearch) {
-                return rows.filter(function() {
-                    var text = $(this).find(".label").text();
-                    return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
-                }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
-            };
-            
-            var powerToughness = filterer(rows, /P\/T/i).split(/\s*\/\s*/);
-            var details = {
-                gathererId: card.gathererId,
-                lastUpdated: new Date(),
-                name: filterer(rows, /name/i),
-                cost: {
-                    string: filterer(rows, /mana cost/i, /converted mana cost/i),
-                    cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
-                },
-                rules: filterer(rows, /text|rules/i),
-                artist: filterer(rows, /artist/i),
-                power: powerToughness[0] || '',
-                toughness: powerToughness[1] || '',
-                types: filterer(rows, /types/i)
-            };
-            
-            after(between(300, 600), function() {
-              requestPage(gatherer.card('sets', card.gathererId), function($) {
-                var printings = $(".cardList:first .cardItem");
-                var formats = $(".cardList:last .cardItem");
-                
-                var printFields = {};
-                $(".cardList:first tr.headerRow td").each(function() {
-                    var field = $(this).text().replace(/^\s+|\s+$/g, "")
-                    printFields[field] = $(this).prevAll().length;
-                });
-                
-                console.log(printFields);
-                
-                card.set(details);
-                card.save();
-                
-                success();
-              });
-            });
+      async.map(cards, function(card) {
+        var next = this;
+        var details = {};
+        async.promise(function() {
+          requestPage(gatherer.card('details', card.gathererId), this.success);
+        })
+        .then(function($) {
+          var next = this.async();
+          $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
+
+          var rows = $(".cardDetails .rightCol .row");
+
+          var filterer = function(rows, search, negativeSearch) {
+            return rows.filter(function() {
+              var text = $(this).find(".label").text();
+              return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
+            }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
+          };
+
+          var powerToughness = filterer(rows, /P\/T/i).split(/\s*\/\s*/);
+          details = {
+            gathererId: card.gathererId,
+            lastUpdated: new Date(),
+            name: filterer(rows, /name/i),
+            cost: {
+              string: filterer(rows, /mana cost/i, /converted mana cost/i),
+              cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
+            },
+            rules: filterer(rows, /text|rules/i),
+            artist: filterer(rows, /artist/i),
+            power: powerToughness[0] || '',
+            toughness: powerToughness[1] || '',
+            types: filterer(rows, /types/i)
+          };
+
+          requestPage(gatherer.card('sets', card.gathererId), next.success);
+        })
+        .then(function($) {
+          var printings = $(".cardList:first .cardItem");
+          var formats = $(".cardList:last .cardItem");
+          var printFields = {};
+
+          $(".cardList:first tr.headerRow td").each(function() {
+              var field = $(this).text().replace(/^\s+|\s+$/g, "")
+              printFields[field] = $(this).prevAll().length;
           });
+
+          console.log(printFields);
+
+          card.set(details);
+          card.save();
+
+          next.success();
         });
       });
     });
@@ -250,37 +304,4 @@ var app = {
 
 // app.findCards();
 // app.updateCards();
-
-var async = require('./async.js');
-
-// Runs a function with asynchronous behaviour on an array of items
-// async.chain([1,2,3,4,5,6], function(item) {
-  // var next = this.async(true);
-  // setTimeout(function() {
-    // console.log(item); 
-    // if (item == 4) return next.break();
-    // next.continue();
-  // }, 10);
-// }).then(function(i) { this.success(i+1); })
-// .then(function(i) { console.log(i); });
-
-// Runs a function with asynchronous behaviour on an array of items
-async.promise(function() {
-	var next = this;
-    setTimeout(function() {
-        next.success(1,2,3);
-    }, 0);
-})
-.then(function(a, b, c) { return a + b + c; })
-.then(function(d) { return "The answer is "+d; })
-.then(function(d) {
-  var next = this.async();
-  next.success(d);
-})
-.then(function(e) {
-  var next = this.async();
-  setTimeout(function() { next.success(e.replace("is", "was")); }, 0);
-})
-.then(function(f) {
-  console.log(f);
-})
+app.updateCategories();
