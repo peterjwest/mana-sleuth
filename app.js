@@ -24,6 +24,7 @@ var schemas = {
     lastUpdated: Date,
     flavourText: String,
     artist: String,
+    watermark: String,
     types: [Schema.ObjectId],
     subtypes: [Schema.ObjectId],
     format: [Schema.ObjectId],
@@ -63,10 +64,6 @@ var schemas = {
 
   Rarity: new Schema({
     name: String
-  }),
-
-  Mark: new Schema({
-    name: String
   })
 };
 
@@ -85,6 +82,7 @@ var models = {};
 for (i in schemas) {
   models[i] = mongoose.model(i, schemas[i]);
   models[i].sync = sync;
+  models[i].collectionName = i;
 }
 
 // Method to find cards which need updating
@@ -159,7 +157,7 @@ var gatherer = {
     cards: '/Pages/Search/Default.aspx?',
     details: '/Pages/Card/Details.aspx?',
     original: '/Pages/Card/Details.aspx?printed=true&',
-    sets: '/Pages/Card/Printings.aspx?',
+    printings: '/Pages/Card/Printings.aspx?',
     image: '/Handlers/Image.ashx?'
   },
   cards: function(set) {
@@ -210,7 +208,8 @@ var requestPage = function(uri, fn) {
 // App functionality
 var app = {
   // This uses the advanced search page to get category names like set, block, format, rarity
-  updateCategories: function() {
+  updateCategories: function(callback) {
+    console.log("Updating categories");
     requestPage(gatherer.categories(), function($) {
       var filterer = function(items, search, negativeSearch) {
         var match = items.filter(function() {
@@ -225,15 +224,14 @@ var app = {
 
       var conditions = $(".advancedSearchTable tr");
       //Can't use this method/page to get artist, since artists are pulled in with AJAX
-      var categories = ["Set", "Format", "Block", "Type", "Subtype", "Rarity", "Mark"];
+      var categories = ["Set", "Format", "Block", "Type", "Subtype", "Rarity"];
       var values = {
         Set: filterer(conditions, /set|expansion/i),
         Format: filterer(conditions, /format/i),
         Block: filterer(conditions, /block/i),
         Type: filterer(conditions, /type/i, /subtype/i),
         Subtype: filterer(conditions, /subtype/i),
-        Rarity: filterer(conditions, /rarity/i),
-        Mark: filterer(conditions, /mark/i)
+        Rarity: filterer(conditions, /rarity/i)
       };
 
       async.map(categories, function(category) {
@@ -241,15 +239,17 @@ var app = {
           var details = {name: name};
           models[category].sync(details, details, this.success);
         }).then(this.success);
+      }).then(function() {
+        console.log("Updated "+categories.length+ " categories");
+        if (callback) callback();
       });
     });
   },
 
   // This uses the card search list view page to get basic details of a number of cards
-  findCards: function() {
+  findCards: function(callback) {
     var url = gatherer.cards("Dark Ascension");
     console.log("Finding new cards");
-    console.log(url);
     requestPage(url, function($) {
       var cards = {};
       $(".cardItem").each(function() {
@@ -271,26 +271,28 @@ var app = {
 
       async.map(cards, function(card) {
         models.Card.sync({gathererId: card.gathererId}, card, this.success);
-        console.log("Updating "+card.name);
       })
       .then(function() {
         console.log("Found "+cards.length+" cards");
+        if (callback) callback();
       });
     });
   },
 
   // This uses the card details and printings pages to get the full details of a card
-  updateCards: function() {
+  updateCards: function(callback) {
     console.log("Updating cards");
     models.Card.lastUpdated(10, function(cards) {
       async.map(cards, function(card) {
         var next = this;
         var details = {};
+
+        //Gets card details page
         async.promise(function() {
           requestPage(gatherer.card('details', card.gathererId), this.success);
         })
         .then(function($) {
-          var next = this.async();
+          var next = this;
           $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
 
           var rows = $(".cardDetails .rightCol .row");
@@ -303,9 +305,6 @@ var app = {
           };
 
           var strength = util.hash(filterer(rows, /P\/T/i).split(/\s*\/\s*/), ["power", "toughness"]);
-          var typeGroups = util.hash(filterer(rows, /types/i).split(/\s+—\s+/), ["types", "subtypes"]);
-          var types = (typeGroups.types || "").split(/\s+/);
-          var subtypes = (typeGroups.subtypes || "").split(/\s+/);
           details = {
             gathererId: card.gathererId,
             lastUpdated: new Date(),
@@ -315,24 +314,34 @@ var app = {
               cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
             },
             rules: filterer(rows, /text|rules/i),
-            artist: filterer(rows, /artist/i),
             power: strength.power || '',
-            toughness: strength.toughness || ''
+            toughness: strength.toughness || '',
+            artist: filterer(rows, /artist/i),
+            watermark: filterer(rows, /watermark/i)
           };
 
-          async.promise(function() {
-            var next = this.async();
-            models.Type.find({name: {'$in': types}}, function(err, types) { next.success(types) });
+          //Gets reference fields from the database (types, subtypes)
+          var typeGroups = util.hash(filterer(rows, /types/i).split(/\s+—\s+/), ["types", "subtypes"]);
+          var types = (typeGroups.types || "").split(/\s+/);
+          var subtypes = (typeGroups.subtypes || "").split(/\s+/);
+          var references = [
+            {model: models.Type, value: types},
+            {model: models.Subtype, value: subtypes}
+          ];
+          async.map(references, function(reference) {
+            var next = this;
+            reference.model.find({name: {'$in': reference.value}}, function(err, data) { next.success(data); });
           })
-          .then(function(types) {
-            var next = this.async();
-            details.types = util.pluck(types, "_id");
-            models.Subtype.find({name: {'$in': subtypes}}, function(err, subtypes) { next.success(subtypes) });
-          })
-          .then(function(subtypes) {
-            details.subtypes = util.pluck(subtypes, "_id");
-            requestPage(gatherer.card('sets', card.gathererId), next.success);
+          .then(function(datas) {
+            datas.map(function(data, i) {
+              details[references[i].model.collectionName] = util.pluck(data, "_id");
+            });
+            next.success(card);
           });
+        })
+        // Gets printings page
+        .then(function(card) {
+          requestPage(gatherer.card('printings', card.gathererId), this.success);
         })
         .then(function($) {
           var cardList = $(".cardList:first");
@@ -359,14 +368,17 @@ var app = {
             printings.push(printing);
           });
 
-          console.log(printings);
+          //console.log(printings);
 
           card.set(details);
           card.save();
 
-          console.log("Updating full details for "+card.name);
+          console.log("Updating "+card.name);
           next.success();
         });
+      })
+      .then(function() {
+        if (callback) callback();
       });
     });
   }
@@ -375,6 +387,10 @@ var app = {
 // scheduler.every('2 days', 'findCards', app.findCards);
 // scheduler.every('2 minutes', 'updateCards', app.updateCards);
 
-// app.updateCategories();
-// app.findCards();
-app.updateCards();
+async.promise(function() {
+  app.updateCategories(this.success);
+}).then(function() {
+  app.findCards(this.success);
+}).then(function() {
+  app.updateCards(this.success);
+});
