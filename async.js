@@ -14,17 +14,14 @@ async.promise = function(fn) {
   var create = function() {
 
     // Creates an empty promise
-    var promise = {sync: true};
+    var promise = {};
     promise.next = {
       success: function() {
         promise.succeeded = arguments[0];
         if (promise.success) promise.success();
       },
       fail: function() { promise.failed = arguments[0]; },
-      async: function() {
-        promise.sync = false;
-        return promise.next;
-      }
+      async: function() { return promise.next; }
     };
 
     // Adds then method to the promise
@@ -33,10 +30,8 @@ async.promise = function(fn) {
 
       promise.success = function() {
         var value = success.call(newPromise.next, promise.succeeded);
-        if (newPromise.sync) newPromise.next.success(value);
       };
       if (promise.succeeded) promise.success();
-
       return newPromise;
     };
 
@@ -45,16 +40,14 @@ async.promise = function(fn) {
 
   // Creates a promise and runs it on the function provided
   var promise = create();
-  promise.async = true;
   fn.apply(promise.next);
-
   return promise;
-}
+};
 
 // Runs a function with asynchronous behaviour on an array of items
 async.map = function(items, fn) {
   return async.promise(function() {
-    var next = this.async();
+    var next = this;
     var array = [];
 
     // Runs the function on one item by index
