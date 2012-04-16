@@ -23,7 +23,11 @@ var schemas = {
     dataComplete: Boolean,
     lastUpdated: Date,
     flavourText: String,
-    artist: String
+    artist: String,
+    types: [Schema.ObjectId],
+    subtypes: [Schema.ObjectId],
+    format: [Schema.ObjectId],
+    printings: [Schema.ObjectId]
   }),
 
   Multipart: new Schema({
@@ -31,15 +35,38 @@ var schemas = {
     type: {type: String, match: /^flip|split|transform$/}
   }),
 
-  Printings: new Schema({
-    name: String,
-    cardId: Schema.ObjectId,
-    setId: Schema.ObjectId
+  Printing: new Schema({
+    set: Schema.ObjectId,
+    rarity: Schema.ObjectId
   }),
 
   Set: new Schema({
+    name: String
+  }),
+
+  Format: new Schema({
+    name: String
+  }),
+
+  Block: new Schema({
     name: String,
-    blockId: Schema.ObjectId
+    sets: [Schema.ObjectId]
+  }),
+
+  Type: new Schema({
+    name: String
+  }),
+
+  Subtype: new Schema({
+    name: String
+  }),
+
+  Rarity: new Schema({
+    name: String
+  }),
+
+  Mark: new Schema({
+    name: String
   })
 };
 
@@ -84,6 +111,19 @@ var util = {
       array.push(obj[key]);
     }
     return array;
+  },
+  hash: function(array, keys) {
+    var obj = {};
+    array.map(function(item, key) { obj[keys[key]] = item; });
+    return obj;
+  },
+  pluck: function(array, key) {
+    var values = [];
+    array.map(function(item) { values.push(item[key]); });
+    return values;
+  },
+  quote: function(str) {
+    return '"'+str+'"';
   }
 };
 
@@ -98,17 +138,14 @@ var scheduler = {
     if (!this.units[unit]) throw "Cannot determine unit of time";
     return parseInt(parseInt(time[0]) * this.units[unit]);
   },
-
   every: function(time, name, fn) {
     var id = setInterval(fn, this.decodeTime(time));
     this.tasks[name] = {name: name, id: id, fn: fn};
   },
-
   remove: function(name) {
     clearInterval(this.tasks[name].id);
     delete this.tasks[name];
   },
-
   trigger: function(name) {
     this.tasks[name]();
   }
@@ -125,8 +162,8 @@ var gatherer = {
     sets: '/Pages/Card/Printings.aspx?',
     image: '/Handlers/Image.ashx?'
   },
-  cards: function() {
-    return this.domain+this.paths.cards+'output=checklist&color=|[W]|[U]|[R]|[G]|[C]|[B]';
+  cards: function(set) {
+    return this.domain+this.paths.cards+'output=checklist&set=|['+encodeURIComponent(util.quote(set))+']';
   },
   card: function(type, id, query) {
     if (!this.paths[type]) throw "Cannot find card resource type";
@@ -150,9 +187,9 @@ var fixtures = {
 var colours = {Green: 'G', Black: 'B', Blue: 'U', Red: 'R', White: 'W'};
 
 var toArray = function(obj) {
-    var i, array = [];
-    for (i = 0; i < obj.length; i++) array.push(obj[i]);
-    return array;
+  var i, array = [];
+  for (i = 0; i < obj.length; i++) array.push(obj[i]);
+  return array;
 }
 
 // Gets a random number between a min and max
@@ -187,23 +224,30 @@ var app = {
       };
 
       var conditions = $(".advancedSearchTable tr");
-      //Can't use this method to get artist, since artists are pulled in with AJAX
-      var categories = {
-        sets: filterer(conditions, /set|expansion/i),
-        formats: filterer(conditions, /format/i),
-        block: filterer(conditions, /block/i),
-        types: filterer(conditions, /type/i, /subtype/i),
-        subtypes: filterer(conditions, /subtype/i),
-        rarity: filterer(conditions, /rarity/i),
-        mark: filterer(conditions, /mark/i)
+      //Can't use this method/page to get artist, since artists are pulled in with AJAX
+      var categories = ["Set", "Format", "Block", "Type", "Subtype", "Rarity", "Mark"];
+      var values = {
+        Set: filterer(conditions, /set|expansion/i),
+        Format: filterer(conditions, /format/i),
+        Block: filterer(conditions, /block/i),
+        Type: filterer(conditions, /type/i, /subtype/i),
+        Subtype: filterer(conditions, /subtype/i),
+        Rarity: filterer(conditions, /rarity/i),
+        Mark: filterer(conditions, /mark/i)
       };
-      console.log(categories);
+
+      async.map(categories, function(category) {
+        async.map(values[category], function(name) {
+          var details = {name: name};
+          models[category].sync(details, details, this.success);
+        }).then(this.success);
+      });
     });
   },
 
-  // This uses the card search list view page to get basic details of each card
+  // This uses the card search list view page to get basic details of a number of cards
   findCards: function() {
-    var url = gatherer.cards()+"&subtype=+[merfolk]";
+    var url = gatherer.cards("Dark Ascension");
     console.log("Finding new cards");
     console.log(url);
     requestPage(url, function($) {
@@ -224,7 +268,6 @@ var app = {
         cards[card.gathererId] = jquery.extend(cards[card.gathererId] || {}, card);
       });
       cards = util.values(cards);
-      console.log(cards.length);
 
       async.map(cards, function(card) {
         models.Card.sync({gathererId: card.gathererId}, card, this.success);
@@ -239,7 +282,7 @@ var app = {
   // This uses the card details and printings pages to get the full details of a card
   updateCards: function() {
     console.log("Updating cards");
-    models.Card.lastUpdated(1, function(cards) {
+    models.Card.lastUpdated(10, function(cards) {
       async.map(cards, function(card) {
         var next = this;
         var details = {};
@@ -259,7 +302,10 @@ var app = {
             }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
           };
 
-          var powerToughness = filterer(rows, /P\/T/i).split(/\s*\/\s*/);
+          var strength = util.hash(filterer(rows, /P\/T/i).split(/\s*\/\s*/), ["power", "toughness"]);
+          var typeGroups = util.hash(filterer(rows, /types/i).split(/\s+—\s+/), ["types", "subtypes"]);
+          var types = (typeGroups.types || "").split(/\s+/);
+          var subtypes = (typeGroups.subtypes || "").split(/\s+/);
           details = {
             gathererId: card.gathererId,
             lastUpdated: new Date(),
@@ -270,28 +316,55 @@ var app = {
             },
             rules: filterer(rows, /text|rules/i),
             artist: filterer(rows, /artist/i),
-            power: powerToughness[0] || '',
-            toughness: powerToughness[1] || '',
-            types: filterer(rows, /types/i)
+            power: strength.power || '',
+            toughness: strength.toughness || ''
           };
 
-          requestPage(gatherer.card('sets', card.gathererId), next.success);
+          async.promise(function() {
+            var next = this.async();
+            models.Type.find({name: {'$in': types}}, function(err, types) { next.success(types) });
+          })
+          .then(function(types) {
+            var next = this.async();
+            details.types = util.pluck(types, "_id");
+            models.Subtype.find({name: {'$in': subtypes}}, function(err, subtypes) { next.success(subtypes) });
+          })
+          .then(function(subtypes) {
+            details.subtypes = util.pluck(subtypes, "_id");
+            requestPage(gatherer.card('sets', card.gathererId), next.success);
+          });
         })
         .then(function($) {
-          var printings = $(".cardList:first .cardItem");
-          var formats = $(".cardList:last .cardItem");
+          var cardList = $(".cardList:first");
+          var printings = cardList.find(".cardItem");
+          var formats = cardList.find(".cardItem");
           var printFields = {};
+          var printings = [];
 
-          $(".cardList:first tr.headerRow td").each(function() {
-              var field = $(this).text().replace(/^\s+|\s+$/g, "")
-              printFields[field] = $(this).prevAll().length;
+          cardList.find("tr.headerRow td").each(function() {
+            var field = $(this).text().replace(/^\s+|\s+$/g, "")
+            printFields[field] = $(this).prevAll().length;
           });
 
-          console.log(printFields);
+          cardList.find("tr.cardItem").each(function() {
+            var row = $(this);
+            var findCell = function(col) {
+              return row.children("td").eq(printFields[col])
+            };
+            var printing = {
+              Set: findCell("Set").text().replace(/^\s+|\s+$/g, ""),
+              Block: findCell("Block").text().replace(/^\s+|\s+$/g, ""),
+              Rarity: findCell("Symbol").find("img").attr("alt").match(/\(.*\)$/g, "")[0].replace(/\(|\)/g, "")
+            };
+            printings.push(printing);
+          });
+
+          console.log(printings);
 
           card.set(details);
           card.save();
 
+          console.log("Updating full details for "+card.name);
           next.success();
         });
       });
@@ -302,6 +375,6 @@ var app = {
 // scheduler.every('2 days', 'findCards', app.findCards);
 // scheduler.every('2 minutes', 'updateCards', app.updateCards);
 
+// app.updateCategories();
 // app.findCards();
-// app.updateCards();
-app.updateCategories();
+app.updateCards();
