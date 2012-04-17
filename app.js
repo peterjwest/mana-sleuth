@@ -4,6 +4,7 @@ var http = require('http');
 var jquery = require("jquery");
 var jsdom = require('jsdom');
 var mongoose = require('mongoose');
+mongoose.utils = require('./node_modules/mongoose/lib/utils.js');
 var async = require('./async.js');
 mongoose.connect('mongodb://localhost/mana_sleuth');
 
@@ -37,11 +38,11 @@ var schemas = {
   }),
 
   Printing: new Schema({
-    set: Schema.ObjectId,
+    expansion: Schema.ObjectId,
     rarity: Schema.ObjectId
   }),
 
-  Set: new Schema({
+  Expansion: new Schema({
     name: String
   }),
 
@@ -51,7 +52,7 @@ var schemas = {
 
   Block: new Schema({
     name: String,
-    sets: [Schema.ObjectId]
+    expansions: [Schema.ObjectId]
   }),
 
   Type: new Schema({
@@ -69,9 +70,9 @@ var schemas = {
 
 // Sync method for adding/updating models
 var sync = function(criteria, details, success) {
-  var Card = this;
-  Card.findOne(criteria, function(err, card) {
-    if (!card) card = new Card();
+  var Model = this;
+  Model.findOne(criteria, function(err, card) {
+    if (!card) card = new Model();
     card.set(details);
     card.save(success);
   });
@@ -82,7 +83,7 @@ var models = {};
 for (i in schemas) {
   models[i] = mongoose.model(i, schemas[i]);
   models[i].sync = sync;
-  models[i].collectionName = i;
+  models[i].collectionName = mongoose.utils.toCollectionName(i);
 }
 
 // Method to find cards which need updating
@@ -110,7 +111,12 @@ var util = {
     }
     return array;
   },
-  hash: function(array, keys) {
+  hash: function(array, fn) {
+    var obj = {};
+    array.map(function(item, key) { obj[fn(item, key)] = item; });
+    return obj;
+  },
+  zip: function(array, keys) {
     var obj = {};
     array.map(function(item, key) { obj[keys[key]] = item; });
     return obj;
@@ -160,8 +166,9 @@ var gatherer = {
     printings: '/Pages/Card/Printings.aspx?',
     image: '/Handlers/Image.ashx?'
   },
-  cards: function(set) {
-    return this.domain+this.paths.cards+'output=checklist&set=|['+encodeURIComponent(util.quote(set))+']';
+  cards: function(expansion) {
+    var params = 'output=checklist&set=|['+encodeURIComponent(util.quote(expansion))+']';
+    return this.domain+this.paths.cards+params;
   },
   card: function(type, id, query) {
     if (!this.paths[type]) throw "Cannot find card resource type";
@@ -207,7 +214,7 @@ var requestPage = function(uri, fn) {
 
 // App functionality
 var app = {
-  // This uses the advanced search page to get category names like set, block, format, rarity
+  // This uses the advanced search page to get category names like expansion, block, format, rarity
   updateCategories: function(callback) {
     console.log("Updating categories");
     requestPage(gatherer.categories(), function($) {
@@ -224,9 +231,9 @@ var app = {
 
       var conditions = $(".advancedSearchTable tr");
       //Can't use this method/page to get artist, since artists are pulled in with AJAX
-      var categories = ["Set", "Format", "Block", "Type", "Subtype", "Rarity"];
+      var categories = ["Expansion", "Format", "Block", "Type", "Subtype", "Rarity"];
       var values = {
-        Set: filterer(conditions, /set|expansion/i),
+        Expansion: filterer(conditions, /set|expansion/i),
         Format: filterer(conditions, /format/i),
         Block: filterer(conditions, /block/i),
         Type: filterer(conditions, /type/i, /subtype/i),
@@ -304,7 +311,7 @@ var app = {
             }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
           };
 
-          var strength = util.hash(filterer(rows, /P\/T/i).split(/\s*\/\s*/), ["power", "toughness"]);
+          var strength = util.zip(filterer(rows, /P\/T/i).split(/\s*\/\s*/), ["power", "toughness"]);
           details = {
             gathererId: card.gathererId,
             lastUpdated: new Date(),
@@ -321,7 +328,7 @@ var app = {
           };
 
           //Gets reference fields from the database (types, subtypes)
-          var typeGroups = util.hash(filterer(rows, /types/i).split(/\s+—\s+/), ["types", "subtypes"]);
+          var typeGroups = util.zip(filterer(rows, /types/i).split(/\s+—\s+/), ["types", "subtypes"]);
           var types = (typeGroups.types || "").split(/\s+/);
           var subtypes = (typeGroups.subtypes || "").split(/\s+/);
           var references = [
@@ -361,20 +368,32 @@ var app = {
               return row.children("td").eq(printFields[col])
             };
             var printing = {
-              Set: findCell("Set").text().replace(/^\s+|\s+$/g, ""),
-              Block: findCell("Block").text().replace(/^\s+|\s+$/g, ""),
-              Rarity: findCell("Symbol").find("img").attr("alt").match(/\(.*\)$/g, "")[0].replace(/\(|\)/g, "")
+              expansion: findCell("Expansion").text().replace(/^\s+|\s+$/g, ""),
+              rarity: findCell("Symbol").find("img").attr("alt").match(/\(.*\)$/g, "")[0].replace(/\(|\)/g, "")
+            };
+            var blockExpansion = {
+              expansion: printing.expansion,
+              block: findCell("Block").text().replace(/^\s+|\s+$/g, "")
             };
             printings.push(printing);
           });
 
-          //console.log(printings);
+          models.Printing.find({'_id': {'$in': card.printings}}).remove(function(err, data) {
+            async.map(printings, function(details) {
+              var next = this;
+              var printing = new models.Printing();
+              printing.set(details);
+              printing.save(function(err) { next.success(printing._id); });
+            }).then(function(printings) {
+              details.printings = printings;
+              console.log(details);
+              card.set(details);
+              card.save();
 
-          card.set(details);
-          card.save();
-
-          console.log("Updating "+card.name);
-          next.success();
+              console.log("Updating "+card.name);
+              next.success();
+            });
+          });
         });
       })
       .then(function() {
