@@ -4,69 +4,11 @@ var http = require('http');
 var jquery = require("jquery");
 var jsdom = require('jsdom');
 var mongoose = require('mongoose');
-mongoose.utils = require('./node_modules/mongoose/lib/utils.js');
 var async = require('./async.js');
+var scheduler = require('./scheduler.js');
+var schemas = require('./schemas.js');
+
 mongoose.connect('mongodb://localhost/mana_sleuth');
-
-// Define schemas
-var Schema = mongoose.Schema;
-
-var schemas = {
-  Card: new Schema({
-    name: String,
-    power: {type: String, match: /^\d*|\*$/},
-    toughness: {type: String, match: /^\d*|\*$/},
-    cost: {string: String, cmc: Number},
-    colours: [String],
-    rules: String,
-    multipart: Schema.ObjectId,
-    gathererId: {type: Number, index: true},
-    dataComplete: Boolean,
-    lastUpdated: Date,
-    flavourText: String,
-    artist: String,
-    watermark: String,
-    types: [Schema.ObjectId],
-    subtypes: [Schema.ObjectId],
-    format: [Schema.ObjectId],
-    printings: [Schema.ObjectId]
-  }),
-
-  Multipart: new Schema({
-    cards: [Schema.ObjectId],
-    type: {type: String, match: /^flip|split|transform$/}
-  }),
-
-  Printing: new Schema({
-    expansion: Schema.ObjectId,
-    rarity: Schema.ObjectId
-  }),
-
-  Expansion: new Schema({
-    name: String
-  }),
-
-  Format: new Schema({
-    name: String
-  }),
-
-  Block: new Schema({
-    name: String,
-    expansions: [Schema.ObjectId]
-  }),
-
-  Type: new Schema({
-    name: String
-  }),
-
-  Subtype: new Schema({
-    name: String
-  }),
-
-  Rarity: new Schema({
-    name: String
-  })
-};
 
 // Sync method for adding/updating models
 var sync = function(criteria, details, success) {
@@ -94,14 +36,6 @@ models.Card.lastUpdated = function(number, fn) {
   });
 };
 
-// Time units
-units = [];
-units.second = 1000;
-units.minute = 60 * units.second;
-units.hour = 60 * units.minute;
-units.day = 24 * units.hour;
-units.week = 7 * units.day;
-
 // Util
 var util = {
   values: function(obj) {
@@ -128,30 +62,6 @@ var util = {
   },
   quote: function(str) {
     return '"'+str+'"';
-  }
-};
-
-// Schedules tasks
-var scheduler = {
-  units: units,
-  tasks: {},
-
-  decodeTime: function(string) {
-    var time = string.split(/\s+/);
-    var unit = time[1].replace(/s$/, "");
-    if (!this.units[unit]) throw "Cannot determine unit of time";
-    return parseInt(parseInt(time[0]) * this.units[unit]);
-  },
-  every: function(time, name, fn) {
-    var id = setInterval(fn, this.decodeTime(time));
-    this.tasks[name] = {name: name, id: id, fn: fn};
-  },
-  remove: function(name) {
-    clearInterval(this.tasks[name].id);
-    delete this.tasks[name];
-  },
-  trigger: function(name) {
-    this.tasks[name]();
   }
 };
 
@@ -289,15 +199,35 @@ var app = {
   // This uses the card details and printings pages to get the full details of a card
   updateCards: function(callback) {
     console.log("Updating cards");
-    models.Card.lastUpdated(10, function(cards) {
+
+    // Get required collections from the database
+    var collections = {}
+    async.map(['Type', 'Subtype', 'Expansion', 'Rarity', 'Block', 'Format'], function(name) {
+      var next = this;
+      var model = models[name];
+      model.find(function(err, data) {
+        collections[model.collectionName] = util.hash(data, function(item) { return item.name; });
+        next.success();
+      });
+    })
+
+    // Get the cards which need updating
+    .then(function() {
+      models.Card.lastUpdated(10, this.success);
+    })
+
+    // Update each card
+    .then(function(cards) {
       async.map(cards, function(card) {
         var next = this;
         var details = {};
 
-        //Gets card details page
+        // Gets card details page
         async.promise(function() {
           requestPage(gatherer.card('details', card.gathererId), this.success);
         })
+
+        // Scrapes the details
         .then(function($) {
           var next = this;
           $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
@@ -312,6 +242,7 @@ var app = {
           };
 
           var strength = util.zip(filterer(rows, /P\/T/i).split(/\s*\/\s*/), ["power", "toughness"]);
+
           details = {
             gathererId: card.gathererId,
             lastUpdated: new Date(),
@@ -327,73 +258,64 @@ var app = {
             watermark: filterer(rows, /watermark/i)
           };
 
-          //Gets reference fields from the database (types, subtypes)
+          // Gets reference fields from the database (types, subtypes)
           var typeGroups = util.zip(filterer(rows, /types/i).split(/\s+—\s+/), ["types", "subtypes"]);
-          var types = (typeGroups.types || "").split(/\s+/);
-          var subtypes = (typeGroups.subtypes || "").split(/\s+/);
-          var references = [
-            {model: models.Type, value: types},
-            {model: models.Subtype, value: subtypes}
-          ];
-          async.map(references, function(reference) {
-            var next = this;
-            reference.model.find({name: {'$in': reference.value}}, function(err, data) { next.success(data); });
-          })
-          .then(function(datas) {
-            datas.map(function(data, i) {
-              details[references[i].model.collectionName] = util.pluck(data, "_id");
-            });
-            next.success(card);
+          details.types = (typeGroups.types || "").split(/\s+/).map(function(type) {
+            return collections.types[type];
           });
+          details.subtypes = (typeGroups.subtypes || "").split(/\s+/).map(function(subtype) {
+            return collections.subtypes[subtype];
+          });
+          next.success(card);
         })
+
         // Gets printings page
         .then(function(card) {
           requestPage(gatherer.card('printings', card.gathererId), this.success);
         })
+
+        // Scrapes printings
         .then(function($) {
           var cardList = $(".cardList:first");
           var printings = cardList.find(".cardItem");
           var formats = cardList.find(".cardItem");
           var printFields = {};
-          var printings = [];
+          details.printings = [];
 
           cardList.find("tr.headerRow td").each(function() {
             var field = $(this).text().replace(/^\s+|\s+$/g, "")
             printFields[field] = $(this).prevAll().length;
           });
 
+
+
           cardList.find("tr.cardItem").each(function() {
             var row = $(this);
             var findCell = function(col) {
               return row.children("td").eq(printFields[col])
             };
-            var printing = {
+            var names = {
               expansion: findCell("Expansion").text().replace(/^\s+|\s+$/g, ""),
-              rarity: findCell("Symbol").find("img").attr("alt").match(/\(.*\)$/g, "")[0].replace(/\(|\)/g, "")
+              rarity: findCell("Symbol").find("img").attr("alt").match(/\((.*)\)$/, "")[1]
             };
+            var references = {
+              expansion: collections.expansions[names.expansion],
+              rarity: collections.rarities[names.rarity]
+            };
+            var printing = new models.Printing();
+            printing.set(references);
+            details.printings.push(printing);
+
+            //TODO: save block/expansion relationships here
             var blockExpansion = {
-              expansion: printing.expansion,
+              expansion: details.expansion,
               block: findCell("Block").text().replace(/^\s+|\s+$/g, "")
             };
-            printings.push(printing);
           });
 
-          models.Printing.find({'_id': {'$in': card.printings}}).remove(function(err, data) {
-            async.map(printings, function(details) {
-              var next = this;
-              var printing = new models.Printing();
-              printing.set(details);
-              printing.save(function(err) { next.success(printing._id); });
-            }).then(function(printings) {
-              details.printings = printings;
-              console.log(details);
-              card.set(details);
-              card.save();
-
-              console.log("Updating "+card.name);
-              next.success();
-            });
-          });
+          console.log("Updating "+card.name);
+          card.set(details);
+          card.save(next.success);
         });
       })
       .then(function() {
@@ -409,7 +331,7 @@ var app = {
 async.promise(function() {
   app.updateCategories(this.success);
 }).then(function() {
-  app.findCards(this.success);
-}).then(function() {
+//   app.findCards(this.success);
+// }).then(function() {
   app.updateCards(this.success);
 });
