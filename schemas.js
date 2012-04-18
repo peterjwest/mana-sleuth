@@ -31,7 +31,7 @@ schemas.Card = new Schema({
   subtypes: [Schema.ObjectId],
   format: [Schema.ObjectId],
   printings: [schemas.Printing],
-  legality: [schemas.Legality]
+  legalities: [schemas.Legality]
 });
 
 schemas.Multipart = new Schema({
