@@ -63,5 +63,3 @@ schemas.Subtype = new Schema({
 schemas.Rarity = new Schema({
   name: String
 });
-
-exports = schemas;
