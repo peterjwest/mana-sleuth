@@ -151,9 +151,17 @@ var app = {
         Rarity: filterer(conditions, /rarity/i)
       };
 
+      var hooks = {
+        Expansion: function(details) {
+          details.updated = false;
+          return details;
+        }
+      };
+
       async.map(categories, function(category) {
         async.map(values[category], function(name) {
           var details = {name: name};
+          if (hooks[category]) details = hooks[category](details);
           models[category].sync(details, details, this.success);
         }).then(this.success);
       }).then(function() {
@@ -276,34 +284,29 @@ var app = {
 
         // Scrapes printings
         .then(function($) {
-          var cardList = $(".cardList:first");
-          var printings = cardList.find(".cardItem");
-          var formats = cardList.find(".cardItem");
+          var printings = $(".cardList:first");
           var printFields = {};
           details.printings = [];
 
-          cardList.find("tr.headerRow td").each(function() {
+          printings.find("tr.headerRow td").each(function() {
             var field = $(this).text().replace(/^\s+|\s+$/g, "")
             printFields[field] = $(this).prevAll().length;
           });
 
-
-
-          cardList.find("tr.cardItem").each(function() {
+          printings.find("tr.cardItem").each(function() {
             var row = $(this);
             var findCell = function(col) {
               return row.children("td").eq(printFields[col])
             };
-            var names = {
+            var values = {
               expansion: findCell("Expansion").text().replace(/^\s+|\s+$/g, ""),
               rarity: findCell("Symbol").find("img").attr("alt").match(/\((.*)\)$/, "")[1]
             };
-            var references = {
-              expansion: collections.expansions[names.expansion],
-              rarity: collections.rarities[names.rarity]
-            };
             var printing = new models.Printing();
-            printing.set(references);
+            printing.set({
+              expansion: collections.expansions[values.expansion],
+              rarity: collections.rarities[values.rarity]
+            });
             details.printings.push(printing);
 
             //TODO: save block/expansion relationships here
@@ -313,8 +316,35 @@ var app = {
             };
           });
 
+          var formats = $(".cardList:last");
+          var formatFields = {};
+          details.legalities = [];
+
+          formats.find("tr.headerRow td").each(function() {
+            var field = $(this).text().replace(/^\s+|\s+$/g, "")
+            formatFields[field] = $(this).prevAll().length;
+          });
+
+          formats.find("tr.cardItem").each(function() {
+            var row = $(this);
+            var findCell = function(col) {
+              return row.children("td").eq(formatFields[col])
+            };
+            var values = {
+              format: findCell("Format").text().replace(/^\s+|\s+$/g, ""),
+              legality: findCell("Legality").text().replace(/^\s+|\s+$/g, "")
+            };
+            var legality = new models.Legality();
+            legality.set({
+              format: collections.formats[values.format],
+              legality: values.legality
+            });
+            details.legalities.push(legality);
+          });
+
           console.log("Updating "+card.name);
           card.set(details);
+          console.log(card);
           card.save(next.success);
         });
       })
