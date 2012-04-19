@@ -22,7 +22,6 @@ schemas.Card = new Schema({
   rules: String,
   multipart: Schema.ObjectId,
   gathererId: {type: Number, index: true},
-  dataComplete: Boolean,
   lastUpdated: Date,
   flavourText: String,
   artist: String,
@@ -31,7 +30,8 @@ schemas.Card = new Schema({
   subtypes: [Schema.ObjectId],
   format: [Schema.ObjectId],
   printings: [schemas.Printing],
-  legalities: [schemas.Legality]
+  legalities: [schemas.Legality],
+  complete: Boolean
 });
 
 schemas.Multipart = new Schema({
@@ -40,7 +40,8 @@ schemas.Multipart = new Schema({
 });
 
 schemas.Expansion = new Schema({
-  name: String
+  name: String,
+  complete: Boolean
 });
 
 schemas.Format = new Schema({
