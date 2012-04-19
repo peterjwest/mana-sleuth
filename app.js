@@ -11,12 +11,13 @@ var schemas = require('./schemas.js');
 mongoose.connect('mongodb://localhost/mana_sleuth');
 
 // Sync method for adding/updating models
-var sync = function(criteria, details, success) {
+var sync = function(criteria, success) {
   var Model = this;
-  Model.findOne(criteria, function(err, card) {
-    if (!card) card = new Model();
-    card.set(details);
-    card.save(success);
+  Model.findOne(criteria, function(err, item) {
+    var unsaved = !item;
+    if (unsaved) item = new Model();
+    item.unsaved = unsaved;
+    success(item);
   });
 };
 
@@ -152,17 +153,21 @@ var app = {
       };
 
       var hooks = {
-        Expansion: function(details) {
-          details.updated = false;
+        Expansion: function(expansion, details) {
+          if (expansion.unsaved) details.complete = false;
           return details;
         }
       };
 
       async.map(categories, function(category) {
         async.map(values[category], function(name) {
+          var next = this;
           var details = {name: name};
-          if (hooks[category]) details = hooks[category](details);
-          models[category].sync(details, details, this.success);
+          models[category].sync(details, function(item) {
+            if (hooks[category]) details = hooks[category](item, details);
+            item.set(details);
+            item.save(next.success);
+          });
         }).then(this.success);
       }).then(function() {
         console.log("Updated "+categories.length+ " categories");
@@ -194,8 +199,12 @@ var app = {
       });
       cards = util.values(cards);
 
-      async.map(cards, function(card) {
-        models.Card.sync({gathererId: card.gathererId}, card, this.success);
+      async.map(cards, function(details) {
+        var next = this;
+        models.Card.sync({gathererId: details.gathererId}, function(card) {
+          card.set(details);
+          card.save(next.success);
+        });
       })
       .then(function() {
         console.log("Found "+cards.length+" cards");
