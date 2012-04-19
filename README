@@ -1,0 +1,9 @@
+#An MTG card search App
+
+##TODO
+
+ - Build frontend
+ - Setup robust scraping
+ - Save block/expansion relationships
+ - Detect multipart cards
+ - Check integrity on save
