@@ -31,7 +31,7 @@ schemas.Card = new Schema({
   format: [Schema.ObjectId],
   printings: [schemas.Printing],
   legalities: [schemas.Legality],
-  complete: Boolean
+  complete: {type: Boolean, default: false}
 });
 
 schemas.Multipart = new Schema({
@@ -41,7 +41,8 @@ schemas.Multipart = new Schema({
 
 schemas.Expansion = new Schema({
   name: String,
-  complete: Boolean
+  complete: {type: Boolean, default: false},
+  populated: {type: Boolean, default: false}
 });
 
 schemas.Format = new Schema({

@@ -17,7 +17,7 @@ var sync = function(criteria, success) {
     var unsaved = !item;
     if (unsaved) item = new Model();
     item.unsaved = unsaved;
-    success(item);
+    if (success) success(item);
   });
 };
 
@@ -141,6 +141,7 @@ var app = {
       };
 
       var conditions = $(".advancedSearchTable tr");
+
       //Can't use this method/page to get artist, since artists are pulled in with AJAX
       var categories = ["Expansion", "Format", "Block", "Type", "Subtype", "Rarity"];
       var values = {
@@ -152,35 +153,34 @@ var app = {
         Rarity: filterer(conditions, /rarity/i)
       };
 
-      var hooks = {
-        Expansion: function(expansion, details) {
-          if (expansion.unsaved) details.complete = false;
-          return details;
-        }
-      };
+      var expansions = [];
 
+      // Iterates through different models and saves them
       async.map(categories, function(category) {
         async.map(values[category], function(name) {
           var next = this;
           var details = {name: name};
           models[category].sync(details, function(item) {
-            if (hooks[category]) details = hooks[category](item, details);
+            if (category == "Expansion" && !item.populated) expansions.push(item);
             item.set(details);
-            item.save(next.success);
+            item.save(next.success());
           });
         }).then(this.success);
+
+      // Iterates through new expansions and populates cards for them
       }).then(function() {
         console.log("Updated "+categories.length+ " categories");
-        if (callback) callback();
+        async.map(expansions, function(expansion) {
+          app.populateExpansion(expansion, this.success);
+        }).then(function() { if(callback) callback(); });
       });
     });
   },
 
-  // This uses the card search list view page to get basic details of a number of cards
-  findCards: function(callback) {
-    var url = gatherer.cards("Dark Ascension");
-    console.log("Finding new cards");
-    requestPage(url, function($) {
+  // This uses the card search list view page to get basic details of cards in an expansion
+  populateExpansion: function(expansion, callback) {
+    console.log("Finding cards for "+expansion.name);
+    requestPage(gatherer.cards(expansion.name), function($) {
       var cards = {};
       $(".cardItem").each(function() {
         var $card = $(this);
@@ -208,7 +208,10 @@ var app = {
       })
       .then(function() {
         console.log("Found "+cards.length+" cards");
-        if (callback) callback();
+        expansion.populated = true;
+        expansion.save(function() {
+          if (callback) callback();
+        });
       });
     });
   },
@@ -353,7 +356,6 @@ var app = {
 
           console.log("Updating "+card.name);
           card.set(details);
-          console.log(card);
           card.save(next.success);
         });
       })
@@ -370,7 +372,5 @@ var app = {
 async.promise(function() {
   app.updateCategories(this.success);
 }).then(function() {
-//   app.findCards(this.success);
-// }).then(function() {
   app.updateCards(this.success);
 });
