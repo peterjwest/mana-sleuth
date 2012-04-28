@@ -32,7 +32,7 @@ for (i in schemas) {
 // Method to find cards which need updating
 models.Card.lastUpdated = function(number, fn) {
   var Card = this;
-  Card.find().asc('lastUpdated').limit(number).find(function(err, cards) {
+  Card.find({complete: false}).asc('lastUpdated').limit(number).find(function(err, cards) {
     fn(cards);
   });
 };
@@ -129,7 +129,7 @@ var app = {
   updateCategories: function(callback) {
     console.log("Updating categories");
     requestPage(gatherer.categories(), function($) {
-      var filterer = function(items, search, negativeSearch) {
+      var find = function(items, search, negativeSearch) {
         var match = items.filter(function() {
           var text = $(this).find(".label2").text();
           return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
@@ -145,12 +145,12 @@ var app = {
       //Can't use this method/page to get artist, since artists are pulled in with AJAX
       var categories = ["Expansion", "Format", "Block", "Type", "Subtype", "Rarity"];
       var values = {
-        Expansion: filterer(conditions, /set|expansion/i),
-        Format: filterer(conditions, /format/i),
-        Block: filterer(conditions, /block/i),
-        Type: filterer(conditions, /type/i, /subtype/i),
-        Subtype: filterer(conditions, /subtype/i),
-        Rarity: filterer(conditions, /rarity/i)
+        Expansion: find(conditions, /set|expansion/i),
+        Format: find(conditions, /format/i),
+        Block: find(conditions, /block/i),
+        Type: find(conditions, /type/i, /subtype/i),
+        Subtype: find(conditions, /subtype/i),
+        Rarity: find(conditions, /rarity/i)
       };
 
       var expansions = [];
@@ -233,7 +233,7 @@ var app = {
 
     // Get the cards which need updating
     .then(function() {
-      models.Card.lastUpdated(10, this.success);
+      models.Card.lastUpdated(20000, this.success);
     })
 
     // Update each card
@@ -254,38 +254,50 @@ var app = {
 
           var rows = $(".cardDetails .rightCol .row");
 
-          var filterer = function(rows, search, negativeSearch) {
-            return rows.filter(function() {
-              var text = $(this).find(".label").text();
-              return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
-            }).first().find(".value").text().replace(/^\s+|\s+$/g, "");
+          var replaceImages = function(elem) {
+            elem.find("img").each(function() {
+              $(this).replaceWith($("<span>").text("{"+$(this).attr("alt")+"}"));
+            });
           };
 
-          var strength = util.zip(filterer(rows, /P\/T/i).split(/\s*\/\s*/), ["power", "toughness"]);
+          var text = function(elem) {
+            return elem.text().replace(/^\s+|\s+$/g, "");
+          };
+
+          var find = function(rows, search, negativeSearch) {
+            var match = rows.filter(function() {
+              var text = $(this).find(".label").text();
+              return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
+            }).first().find(".value");
+            replaceImages(match);
+            return match;
+          };
+
+          var strength = util.zip(text(find(rows, /P\/T/i)).split(/\s*\/\s*/), ["power", "toughness"]);
 
           details = {
             gathererId: card.gathererId,
             lastUpdated: new Date(),
-            name: filterer(rows, /name/i),
-            cost: {
-              string: filterer(rows, /mana cost/i, /converted mana cost/i),
-              cmc: parseInt(filterer(rows, /converted mana cost/i)) || 0
-            },
-            rules: filterer(rows, /text|rules/i),
+            name: text(find(rows, /name/i)),
+            cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
+            cmc: parseInt(text(find(rows, /converted mana cost/i))) || 0,
+            rules: find(rows, /text|rules/i).children().map(function() { return text($(this)); }).toArray(),
             power: strength.power || '',
             toughness: strength.toughness || '',
-            artist: filterer(rows, /artist/i),
-            watermark: filterer(rows, /watermark/i)
+            artist: text(find(rows, /artist/i)),
+            flavourText: text(find(rows, /flavor text/i)),
+            watermark: text(find(rows, /watermark/i)),
+            complete: true
           };
 
           // Gets reference fields from the database (types, subtypes)
-          var typeGroups = util.zip(filterer(rows, /types/i).split(/\s+—\s+/), ["types", "subtypes"]);
+          var typeGroups = util.zip(text(find(rows, /types/i)).split(/\s+—\s+/), ["types", "subtypes"]);
           details.types = (typeGroups.types || "").split(/\s+/).map(function(type) {
             return collections.types[type];
-          });
+          }).filter(function(type) { return type; });
           details.subtypes = (typeGroups.subtypes || "").split(/\s+/).map(function(subtype) {
             return collections.subtypes[subtype];
-          });
+          }).filter(function(subtype) { return subtype; });
           next.success(card);
         })
 
@@ -356,7 +368,7 @@ var app = {
 
           console.log("Updating "+card.name);
           card.set(details);
-          card.save(next.success);
+          card.save(next.success;
         });
       })
       .then(function() {
