@@ -159,39 +159,32 @@ var scraper = {
     });
   },
 
-  getExpansionCards: function(expansion, success) {
-    async.promise(function() {
-      var next = this;
-      models.Rarity.find(function(err, data) {
-        next.success(util.hash(data, function(item) { return item.name.charAt(0); }));
-      });
-    })
+  getExpansionCards: function(expansion, rarities, success) {
+    requestPage(gatherer.cards(expansion.name), function($) {
+      var cards = {};
+      $(".cardItem").each(function() {
+        var $card = $(this);
+        var name = $card.find(".name").text();
+        var card = cards[name] || {printings: []};
+        cards[name] = card;
 
-    .then(function(rarities) {
-      requestPage(gatherer.cards(expansion.name), function($) {
-        var cards = {};
-        $(".cardItem").each(function() {
-          var $card = $(this);
-          var name = $card.find(".name").text();
-          var card = cards[name] || {printings: []};
-          cards[name] = card;
+        card.lastUpdated = new Date();
+        card.name = name;
+        card.colours = $card.find(".color").text().split("/")
+          .map(function(c) { return colours[c]; })
+          .filter(function(c) { return c; });
 
-          card.lastUpdated = new Date();
-          card.name = name;
-          card.colours = $card.find(".color").text().split("/")
-            .map(function(c) { return colours[c]; })
-            .filter(function(c) { return c; });
+        var rarity = rarities[$card.find(".rarity").text()];
 
-          card.printings.push({
-            gathererId: $card.find(".nameLink").attr("href").match(/multiverseid=(\d+)/i)[1],
-            artist: $card.find(".artist").text(),
-            expansion: expansion._id,
-            rarity: rarities[$card.find(".rarity").text()]._id
-          });
+        card.printings.push({
+          gathererId: $card.find(".nameLink").attr("href").match(/multiverseid=(\d+)/i)[1],
+          artist: $card.find(".artist").text(),
+          expansion: expansion._id,
+          rarity: rarity ? rarity._id : ""
         });
-        success(util.values(cards));
       });
-    })
+      success(util.values(cards));
+    });
   }
 };
 
@@ -203,6 +196,7 @@ var app = {
     scraper.getCategories(function(values) {
       var categories = ["Expansion", "Format", "Block", "Type", "Subtype", "Rarity"];
       var expansions = [];
+
       // Iterates through different models and saves them
       async.map(categories, function(category) {
         async.map(values[category], function(name) {
@@ -211,24 +205,33 @@ var app = {
           models[category].sync(details, function(item) {
             if (category == "Expansion" && !item.populated) expansions.push(item);
             item.set(details);
-            item.save(next.success());
+            item.save(next.success);
           });
         }).then(this.success);
+      })
+
+      // Finds all rarities
+      .then(function() {
+        var next = this;
+        models.Rarity.find(function(err, data) {
+          next.success(util.hash(data, function(item) { return item.name.charAt(0); }));
+        });
+      })
 
       // Iterates through new expansions and populates cards for them
-      }).then(function() {
+      .then(function(rarities) {
         console.log("Updated "+categories.length+ " categories");
         async.map(expansions, function(expansion) {
-          app.populateExpansion(expansion, this.success);
+          app.populateExpansion(expansion, rarities, this.success);
         }).then(function() { if(callback) callback(); });
       });
     });
   },
 
   // This uses the card search list view page to get basic details of cards in an expansion
-  populateExpansion: function(expansion, callback) {
+  populateExpansion: function(expansion, rarities, callback) {
     console.log("Finding cards for "+expansion.name);
-    scraper.getExpansionCards(expansion, function(cards) {
+    scraper.getExpansionCards(expansion, rarities, function(cards) {
       async.map(cards, function(details) {
         var next = this;
         models.Card.sync({name: details.name}, function(card) {
@@ -275,7 +278,7 @@ var app = {
 
         // Gets card details page
         async.promise(function() {
-          requestPage(gatherer.card('details', card.gathererId), this.success);
+          requestPage(gatherer.card('details', card.printings[0].gathererId), this.success);
         })
 
         // Scrapes the details
@@ -285,8 +288,8 @@ var app = {
 
           var rows = $(".cardDetails .rightCol .row");
 
-          var replaceImages = function(elem) {
-            elem.find("img").each(function() {
+          $.fn.textifyImages = function() {
+            return this.find("img").each(function() {
               $(this).replaceWith($("<span>").text("{"+$(this).attr("alt")+"}"));
             });
           };
@@ -299,36 +302,35 @@ var app = {
             var match = rows.filter(function() {
               var text = $(this).find(".label").text();
               return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
-            }).first().find(".value");
-            replaceImages(match);
+            }).first().find(".value").textifyImages();
             return match;
           };
 
           var strength = util.zip(text(find(rows, /P\/T/i)).split(/\s*\/\s*/), ["power", "toughness"]);
 
           details = {
-            gathererId: card.gathererId,
             lastUpdated: new Date(),
-            name: text(find(rows, /name/i)),
             cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
             cmc: parseInt(text(find(rows, /converted mana cost/i))) || 0,
             rules: find(rows, /text|rules/i).children().map(function() { return text($(this)); }).toArray(),
             power: strength.power || '',
             toughness: strength.toughness || '',
-            artist: text(find(rows, /artist/i)),
             flavourText: text(find(rows, /flavor text/i)),
             watermark: text(find(rows, /watermark/i)),
             complete: true
           };
 
           // Gets reference fields from the database (types, subtypes)
-          var typeGroups = util.zip(text(find(rows, /types/i)).split(/\s+—\s+/), ["types", "subtypes"]);
-          details.types = (typeGroups.types || "").split(/\s+/).map(function(type) {
+          var categories = util.zip(text(find(rows, /types/i)).split(/\s+—\s+/), ["types", "subtypes"]);
+
+          details.types = (categories.types || "").split(/\s+/).map(function(type) {
             return collections.types[type];
           }).filter(function(type) { return type; });
-          details.subtypes = (typeGroups.subtypes || "").split(/\s+/).map(function(subtype) {
+
+          details.subtypes = (categories.subtypes || "").split(/\s+/).map(function(subtype) {
             return collections.subtypes[subtype];
           }).filter(function(subtype) { return subtype; });
+
           next.success(card);
         })
 
