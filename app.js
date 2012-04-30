@@ -115,22 +115,30 @@ var between = function(min, max) { return Math.random()*(max - min) + min };
 var after = function(time, fn) { setTimeout(fn, time); };
 
 // Gets the response of page and gives it to the callback function
-var requestPage = function(uri, fn) {
-  request({uri: uri}, function (error, response, body) {
-    jsdom.env(body, function (err, window) {
-      fn(jquery.create(window));
+var requestPage = function(uri, success) {
+  var tries = 0;
+  var threshold = 3;
+  var attempt = function() {
+    tries++;
+    request({uri: uri}, function (error, response, html) {
+      if (html) {
+        jsdom.env(html, function (err, window) {
+          success(jquery.create(window));
+        });
+      }
+      else if (tries < threshold) attempt();
     });
-  });
+  };
+  attempt();
 };
 
-// App functionality
-var app = {
-  // This uses the advanced search page to get category names like expansion, block, format, rarity
-  updateCategories: function(callback) {
-    console.log("Updating categories");
+var scraper = {
+  getCategories: function(success) {
     requestPage(gatherer.categories(), function($) {
-      var find = function(items, search, negativeSearch) {
-        var match = items.filter(function() {
+      var conditions = $(".advancedSearchTable tr");
+
+      var find = function(search, negativeSearch) {
+        var match = conditions.filter(function() {
           var text = $(this).find(".label2").text();
           return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
         }).first();
@@ -140,21 +148,61 @@ var app = {
         }).toArray();
       };
 
-      var conditions = $(".advancedSearchTable tr");
+      success({
+        Expansion: find(/set|expansion/i),
+        Format: find(/format/i),
+        Block: find(/block/i),
+        Type: find(/type/i, /subtype/i),
+        Subtype: find(/subtype/i),
+        Rarity: find(/rarity/i)
+      });
+    });
+  },
 
-      //Can't use this method/page to get artist, since artists are pulled in with AJAX
+  getExpansionCards: function(expansion, success) {
+    async.promise(function() {
+      var next = this;
+      models.Rarity.find(function(err, data) {
+        next.success(util.hash(data, function(item) { return item.name.charAt(0); }));
+      });
+    })
+
+    .then(function(rarities) {
+      requestPage(gatherer.cards(expansion.name), function($) {
+        var cards = {};
+        $(".cardItem").each(function() {
+          var $card = $(this);
+          var name = $card.find(".name").text();
+          var card = cards[name] || {printings: []};
+          cards[name] = card;
+
+          card.lastUpdated = new Date();
+          card.name = name;
+          card.colours = $card.find(".color").text().split("/")
+            .map(function(c) { return colours[c]; })
+            .filter(function(c) { return c; });
+
+          card.printings.push({
+            gathererId: $card.find(".nameLink").attr("href").match(/multiverseid=(\d+)/i)[1],
+            artist: $card.find(".artist").text(),
+            expansion: expansion._id,
+            rarity: rarities[$card.find(".rarity").text()]._id
+          });
+        });
+        success(util.values(cards));
+      });
+    })
+  }
+};
+
+// App functionality
+var app = {
+  // This uses the advanced search page to get category names like expansion, block, format, rarity
+  updateCategories: function(callback) {
+    console.log("Updating categories");
+    scraper.getCategories(function(values) {
       var categories = ["Expansion", "Format", "Block", "Type", "Subtype", "Rarity"];
-      var values = {
-        Expansion: find(conditions, /set|expansion/i),
-        Format: find(conditions, /format/i),
-        Block: find(conditions, /block/i),
-        Type: find(conditions, /type/i, /subtype/i),
-        Subtype: find(conditions, /subtype/i),
-        Rarity: find(conditions, /rarity/i)
-      };
-
       var expansions = [];
-
       // Iterates through different models and saves them
       async.map(categories, function(category) {
         async.map(values[category], function(name) {
@@ -180,28 +228,11 @@ var app = {
   // This uses the card search list view page to get basic details of cards in an expansion
   populateExpansion: function(expansion, callback) {
     console.log("Finding cards for "+expansion.name);
-    requestPage(gatherer.cards(expansion.name), function($) {
-      var cards = {};
-      $(".cardItem").each(function() {
-        var $card = $(this);
-        var card = {
-          lastUpdated: new Date(),
-          gathererId: $card.find(".nameLink").attr("href")
-            .match(/multiverseid=(\d+)/i)[1],
-          name: $card.find(".name").text(),
-          artist: $card.find(".artist").text(),
-          colours: $card.find(".color").text().split("/")
-            .map(function(c) { return colours[c]; })
-            .filter(function(c) { return c; })
-        };
-        if (card.artist.match(/^\s*$/)) delete card.artist;
-        cards[card.gathererId] = jquery.extend(cards[card.gathererId] || {}, card);
-      });
-      cards = util.values(cards);
-
+    scraper.getExpansionCards(expansion, function(cards) {
       async.map(cards, function(details) {
         var next = this;
-        models.Card.sync({gathererId: details.gathererId}, function(card) {
+        models.Card.sync({name: details.name}, function(card) {
+          details.printings = card.printings.concat(details.printings);
           card.set(details);
           card.save(next.success);
         });
@@ -233,7 +264,7 @@ var app = {
 
     // Get the cards which need updating
     .then(function() {
-      models.Card.lastUpdated(20000, this.success);
+      models.Card.lastUpdated(100, this.success);
     })
 
     // Update each card
@@ -368,7 +399,7 @@ var app = {
 
           console.log("Updating "+card.name);
           card.set(details);
-          card.save(next.success;
+          card.save(next.success);
         });
       })
       .then(function() {
@@ -379,10 +410,11 @@ var app = {
 };
 
 // scheduler.every('2 days', 'findCards', app.findCards);
-// scheduler.every('2 minutes', 'updateCards', app.updateCards);
+//
 
 async.promise(function() {
   app.updateCategories(this.success);
 }).then(function() {
-  app.updateCards(this.success);
+  app.updateCards();
+  //scheduler.every('30 minutes', 'updateCards', app.updateCards);
 });

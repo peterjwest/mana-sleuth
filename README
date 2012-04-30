@@ -6,5 +6,4 @@
  - Setup robust scraping
  - Save block/expansion relationships
  - Detect multipart cards
- - Store gathererId in printings / prevent duplicate cards
  - Error handling

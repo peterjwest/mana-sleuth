@@ -4,8 +4,10 @@ var Schema = mongoose.Schema;
 var schemas = exports || {};
 
 schemas.Printing = new Schema({
+  gathererId: {type: Number, index: true},
   expansion: Schema.ObjectId,
-  rarity: Schema.ObjectId
+  rarity: Schema.ObjectId,
+  artist: String
 });
 
 schemas.Legality = new Schema({
@@ -22,10 +24,8 @@ schemas.Card = new Schema({
   colours: [String],
   rules: [String],
   multipart: Schema.ObjectId,
-  gathererId: {type: Number, index: true},
   lastUpdated: Date,
   flavourText: String,
-  artist: String,
   watermark: String,
   types: [Schema.ObjectId],
   subtypes: [Schema.ObjectId],
