@@ -6,7 +6,7 @@ var schemas = exports || {};
 schemas.Printing = new Schema({
   gathererId: {type: Number, index: true},
   expansion: Schema.ObjectId,
-  rarity: Schema.ObjectId,
+  rarity: String,
   artist: String
 });
 
@@ -59,9 +59,5 @@ schemas.Type = new Schema({
 });
 
 schemas.Subtype = new Schema({
-  name: String
-});
-
-schemas.Rarity = new Schema({
   name: String
 });
