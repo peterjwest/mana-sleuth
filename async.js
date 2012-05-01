@@ -5,6 +5,7 @@
 // TODO
 // Add fail event
 // Prevent multiple firing?
+// Make it work for falsey values
 
 var async = exports || {};
 var nothing = function() {};
@@ -17,7 +18,8 @@ async.promise = function(fn) {
     var promise = {};
     promise.next = {
       success: function() {
-        promise.succeeded = arguments[0];
+        promise.succeeded = true;
+        promise.result = arguments[0];
         if (promise.success) promise.success();
       },
       fail: function() { promise.failed = arguments[0]; },
@@ -27,14 +29,24 @@ async.promise = function(fn) {
     // Adds then method to the promise
     promise.then = function(success, fail) {
       var newPromise = create();
-
       promise.success = function() {
-        var value = success.call(newPromise.next, promise.succeeded);
+        success.call(newPromise.next, promise.result);
       };
       if (promise.succeeded) promise.success();
       return newPromise;
     };
 
+    // Adds map method to the promise
+    promise.map = function(success, fail) {
+      var newPromise = create();
+      promise.success = function() {
+        async.map(promise.result, success).then(function(result) {
+          newPromise.next.success(result);
+        });
+      };
+      if (promise.succeeded) promise.success();
+      return newPromise;
+    };
     return promise;
   };
 
