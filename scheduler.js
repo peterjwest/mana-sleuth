@@ -1,3 +1,5 @@
+var scheduler = exports || {};
+
 // Time units
 var units = [];
 units.second = 1000;
@@ -6,8 +8,6 @@ units.hour = 60 * units.minute;
 units.day = 24 * units.hour;
 units.week = 7 * units.day;
 
-// Schedules tasks
-var scheduler = exports || {};
 scheduler.units = units;
 scheduler.tasks = {};
 

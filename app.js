@@ -3,68 +3,14 @@ var url = require('url');
 var http = require('http');
 var jquery = require("jquery");
 var jsdom = require('jsdom');
-var mongoose = require('mongoose');
 var async = require('./async.js');
 var scheduler = require('./scheduler.js');
-var schemas = require('./schemas.js');
+var util = require('./util.js');
+var mongoose = require('mongoose');
+var schemas = require('./schemas.js')(mongoose);
+var models = require('./models.js')(mongoose, schemas);
 
 mongoose.connect('mongodb://localhost/mana_sleuth');
-
-// Sync method for adding/updating models
-var sync = function(criteria, success) {
-  var Model = this;
-  Model.findOne(criteria, function(err, item) {
-    var unsaved = !item;
-    if (unsaved) item = new Model();
-    item.unsaved = unsaved;
-    if (success) success(item);
-  });
-};
-
-// Define models
-var models = {};
-for (i in schemas) {
-  models[i] = mongoose.model(i, schemas[i]);
-  models[i].sync = sync;
-  models[i].collectionName = mongoose.utils.toCollectionName(i);
-}
-
-// Method to find cards which need updating
-models.Card.lastUpdated = function(number, fn) {
-  var Card = this;
-  Card.find({complete: false}).asc('lastUpdated').limit(number).find(function(err, cards) {
-    fn(cards);
-  });
-};
-
-// Util
-var util = {
-  values: function(obj) {
-    var key, array = [];
-    for (key in obj) {
-      array.push(obj[key]);
-    }
-    return array;
-  },
-  hash: function(array, fn) {
-    var obj = {};
-    array.map(function(item, key) { obj[fn(item, key)] = item; });
-    return obj;
-  },
-  zip: function(array, keys) {
-    var obj = {};
-    array.map(function(item, key) { obj[keys[key]] = item; });
-    return obj;
-  },
-  pluck: function(array, key) {
-    var values = [];
-    array.map(function(item) { values.push(item[key]); });
-    return values;
-  },
-  quote: function(str) {
-    return '"'+str+'"';
-  }
-};
 
 // Gatherer routing
 var gatherer = {
@@ -78,7 +24,7 @@ var gatherer = {
     image: '/Handlers/Image.ashx?'
   },
   cards: function(expansion) {
-    var params = 'output=checklist&set=|['+encodeURIComponent(util.quote(expansion))+']';
+    var params = 'output=checklist&set=|['+encodeURIComponent('"'+expansion+'"')+']';
     return this.domain+this.paths.cards+params;
   },
   card: function(type, id, query) {
@@ -103,19 +49,6 @@ var settings = {
     }
   }
 };
-
-
-var toArray = function(obj) {
-  var i, array = [];
-  for (i = 0; i < obj.length; i++) array.push(obj[i]);
-  return array;
-}
-
-// Gets a random number between a min and max
-var between = function(min, max) { return Math.random()*(max - min) + min };
-
-// Runs a callback after a set amount of time
-var after = function(time, fn) { setTimeout(fn, time); };
 
 // Gets the response of page and gives it to the callback function
 var requestPage = function(uri, success) {
@@ -280,7 +213,7 @@ var app = {
 
       // Gets card details page
       async.promise(function() {
-        requestPage(gatherer.card('details', card.printings[0].gathererId), this.success);
+        requestPage(gatherer.card('details', card.gathererId()), this.success);
       })
 
       // Scrapes the details
@@ -289,9 +222,10 @@ var app = {
         var rows = $(".cardDetails .rightCol .row");
 
         $.fn.textifyImages = function() {
-          return this.find("img").each(function() {
+          this.find("img").each(function() {
             $(this).replaceWith($("<span>").text("{"+$(this).attr("alt")+"}"));
           });
+          return this;
         };
 
         var text = function(elem) {
@@ -299,11 +233,10 @@ var app = {
         };
 
         var find = function(rows, search, negativeSearch) {
-          var match = rows.filter(function() {
+          return rows.filter(function() {
             var text = $(this).find(".label").text();
             return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
           }).first().find(".value").textifyImages();
-          return match;
         };
 
         var strength = util.zip(text(find(rows, /P\/T/i)).split(/\s*\/\s*/), ["power", "toughness"]);
@@ -340,48 +273,16 @@ var app = {
           return collections.subtypes[subtype];
         }).filter(function(subtype) { return subtype; });
 
-        next.success(card);
+        next.success();
       })
 
       // Gets printings page
-      .then(function(card) {
-        requestPage(gatherer.card('printings', card.gathererId), this.success);
+      .then(function() {
+        requestPage(gatherer.card('printings', card.gathererId()), this.success);
       })
 
       // Scrapes printings
       .then(function($) {
-        var printings = $(".cardList:first");
-        var printFields = {};
-        details.printings = [];
-
-        printings.find("tr.headerRow td").each(function() {
-          var field = $(this).text().replace(/^\s+|\s+$/g, "")
-          printFields[field] = $(this).prevAll().length;
-        });
-
-        printings.find("tr.cardItem").each(function() {
-          var row = $(this);
-          var findCell = function(col) {
-            return row.children("td").eq(printFields[col])
-          };
-          var values = {
-            expansion: findCell("Expansion").text().replace(/^\s+|\s+$/g, ""),
-            rarity: findCell("Symbol").find("img").attr("alt").match(/\((.*)\)$/, "")[1]
-          };
-          var printing = new models.Printing();
-          printing.set({
-            expansion: collections.expansions[values.expansion],
-            rarity: collections.rarities[values.rarity]
-          });
-          details.printings.push(printing);
-
-          //TODO: save block/expansion relationships here
-          var blockExpansion = {
-            expansion: details.expansion,
-            block: findCell("Block").text().replace(/^\s+|\s+$/g, "")
-          };
-        });
-
         var formats = $(".cardList:last");
         var formatFields = {};
         details.legalities = [];
@@ -393,12 +294,12 @@ var app = {
 
         formats.find("tr.cardItem").each(function() {
           var row = $(this);
-          var findCell = function(col) {
+          var find = function(col) {
             return row.children("td").eq(formatFields[col])
           };
           var values = {
-            format: findCell("Format").text().replace(/^\s+|\s+$/g, ""),
-            legality: findCell("Legality").text().replace(/^\s+|\s+$/g, "")
+            format: find("Format").text().replace(/^\s+|\s+$/g, ""),
+            legality: find("Legality").text().replace(/^\s+|\s+$/g, "")
           };
           var legality = new models.Legality();
           legality.set({
@@ -420,7 +321,6 @@ var app = {
 };
 
 // scheduler.every('2 days', 'findCards', app.findCards);
-//
 
 async.promise(function() {
   app.updateCategories(this.success);
