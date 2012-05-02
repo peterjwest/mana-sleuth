@@ -209,7 +209,8 @@ var app = {
     // Update each card
     .map(function(card) {
       var next = this;
-      var details = {};
+      var data = []
+      var multipart = false;
 
       // Gets card details page
       async.promise(function() {
@@ -219,7 +220,7 @@ var app = {
       // Scrapes the details
       .then(function($) {
         var next = this;
-        var rows = $(".cardDetails .rightCol .row");
+        var cards = $(".cardDetails");
 
         $.fn.textifyImages = function() {
           this.find("img").each(function() {
@@ -239,39 +240,58 @@ var app = {
           }).first().find(".value").textifyImages();
         };
 
-        var strength = util.zip(text(find(rows, /P\/T/i)).split(/\s*\/\s*/), ["power", "toughness"]);
+        // Detect flip and transform cards
+        if (cards.length > 1) {
+          multipart = {type: 'unknown'};
+          var rules = find(cards.find(".rightCol .row"), /text|rules/i).text();
+          if (rules.match(/transform/i)) multipart.type = 'transform';
+          if (rules.match(/flip/i)) multipart.type = 'flip';
+          multipart.cards = [];
+        }
 
-        details = {
-          lastUpdated: new Date(),
-          cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
-          cmc: parseInt(text(find(rows, /converted mana cost/i))) || 0,
-          rules: find(rows, /text|rules/i).children().map(function() { return text($(this)); }).toArray(),
-          power: strength.power || '',
-          toughness: strength.toughness || '',
-          flavourText: text(find(rows, /flavor text/i)),
-          watermark: text(find(rows, /watermark/i)),
-          complete: true
-        };
+        cards.each(function() {
+          var rows = $(this).find(".rightCol .row");
+          var strength = util.zip(text(find(rows, /P\/T/i)).split(/\s*\/\s*/), ["power", "toughness"]);
+
+          var card = {
+            lastUpdated: new Date(),
+            name: text(find(rows, /name/i)),
+            cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
+            cmc: parseInt(text(find(rows, /converted mana cost/i))) || 0,
+            rules: find(rows, /text|rules/i).children().map(function() { return text($(this)); }).toArray(),
+            power: strength.power || '',
+            toughness: strength.toughness || '',
+            flavourText: text(find(rows, /flavor text/i)),
+            watermark: text(find(rows, /watermark/i)),
+            complete: true
+          };
+
+          var categories = util.zip(text(find(rows, /types/i)).split(/\s+—\s+/), ["types", "subtypes"]);
+
+          card.types = (categories.types || "").split(/\s+/).map(function(type) {
+            return collections.types[type];
+          }).filter(function(type) { return type; });
+
+          card.subtypes = (categories.subtypes || "").split(/\s+/).map(function(subtype) {
+            return collections.subtypes[subtype];
+          }).filter(function(subtype) { return subtype; });
+
+          if (multipart) multipart.cards.push(card.name);
+          data.push(card);
+        });
 
         // Detect split cards
         var name = $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
         if (name.match(/\/\//)) {
-          details.multipart = new models.Multipart();
-          details.multipart.type = "split";
-          var names = name.split(/\s+\/\/\s+/);
-          // TODO: the rest
+          multipart = {type: 'split'};
+          var names = name.split(/\s*\/\/\s*/);
+          var linked = card.name == names[0] ? names[1] : names[0];
+          multipart.cards = [card.name, linked];
         }
 
-        // Gets reference fields from the database (types, subtypes)
-        var categories = util.zip(text(find(rows, /types/i)).split(/\s+—\s+/), ["types", "subtypes"]);
-
-        details.types = (categories.types || "").split(/\s+/).map(function(type) {
-          return collections.types[type];
-        }).filter(function(type) { return type; });
-
-        details.subtypes = (categories.subtypes || "").split(/\s+/).map(function(subtype) {
-          return collections.subtypes[subtype];
-        }).filter(function(subtype) { return subtype; });
+        data.map(function(card) {
+          card.multipart = multipart;
+        });
 
         next.success();
       })
@@ -285,6 +305,7 @@ var app = {
       .then(function($) {
         var formats = $(".cardList:last");
         var formatFields = {};
+        var details = data[0];
         details.legalities = [];
 
         formats.find("tr.headerRow td").each(function() {
@@ -310,6 +331,8 @@ var app = {
         });
 
         console.log("Updating "+card.name);
+        console.log(details);
+        delete details.multipart;
         card.set(details);
         card.save(next.success);
       });
