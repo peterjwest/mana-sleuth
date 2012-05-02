@@ -120,6 +120,124 @@ var scraper = {
       });
       success(util.values(cards));
     });
+  },
+
+  getCardDetails: function(card, collections, success) {
+    requestPage(gatherer.card('details', card.gathererId()), function($) {
+      var cards = [];
+      var multipart = false;
+      var details = $(".cardDetails");
+
+      $.fn.textifyImages = function() {
+        this.find("img").each(function() {
+          $(this).replaceWith($("<span>").text("{"+$(this).attr("alt")+"}"));
+        });
+        return this;
+      };
+
+      var text = function(elem) {
+        return elem.text().replace(/^\s+|\s+$/g, "");
+      };
+
+      var find = function(rows, search, negativeSearch) {
+        return rows.filter(function() {
+          var text = $(this).find(".label").text();
+          return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
+        }).first().find(".value").textifyImages();
+      };
+
+      // Detect flip and transform cards
+      if (details.length > 1) {
+        multipart = {type: 'unknown'};
+        var rules = find(details.find(".rightCol .row"), /text|rules/i).text();
+        if (rules.match(/transform/i)) multipart.type = 'transform';
+        if (rules.match(/flip/i)) multipart.type = 'flip';
+        multipart.cards = [];
+      }
+
+      // Iterate through details
+      details.each(function() {
+        var rows = $(this).find(".rightCol .row");
+        var strength = util.zip(text(find(rows, /P\/T/i)).split(/\s*\/\s*/), ["power", "toughness"]);
+
+        var card = {
+          lastUpdated: new Date(),
+          name: text(find(rows, /name/i)),
+          cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
+          cmc: parseInt(text(find(rows, /converted mana cost/i))) || 0,
+          rules: find(rows, /text|rules/i).children().map(function() { return text($(this)); }).toArray(),
+          power: strength.power || '',
+          toughness: strength.toughness || '',
+          flavourText: text(find(rows, /flavor text/i)),
+          watermark: text(find(rows, /watermark/i)),
+          complete: true
+        };
+
+        var categories = util.zip(text(find(rows, /types/i)).split(/\s+—\s+/), ["types", "subtypes"]);
+
+        card.types = (categories.types || "").split(/\s+/).map(function(type) {
+          return collections.types[type];
+        }).filter(function(type) { return type; });
+
+        card.subtypes = (categories.subtypes || "").split(/\s+/).map(function(subtype) {
+          return collections.subtypes[subtype];
+        }).filter(function(subtype) { return subtype; });
+
+        if (multipart) multipart.cards.push(card.name);
+        cards.push(card);
+      });
+
+      // Detect split cards
+      var name = $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
+      if (name.match(/\/\//)) {
+        multipart = {type: 'split'};
+        var names = name.split(/\s*\/\/\s*/);
+        var linked = card.name == names[0] ? names[1] : names[0];
+        multipart.cards = [card.name, linked];
+      }
+
+      // Get card printings
+      scraper.getCardPrintings(card, collections, function(printings) {
+        cards.map(function(card) {
+          card.multipart = multipart;
+          card.printings = printings;
+        });
+
+        success(cards);
+      });
+    });
+  },
+
+  getCardPrintings: function(card, collections, success) {
+    requestPage(gatherer.card('printings', card.gathererId()), function($) {
+      var formats = $(".cardList:last");
+      var printings = [];
+
+      var formatFields = {};
+      formats.find("tr.headerRow td").each(function() {
+        var field = $(this).text().replace(/^\s+|\s+$/g, "")
+        formatFields[field] = $(this).prevAll().length;
+      });
+
+      formats.find("tr.cardItem").each(function() {
+        var row = $(this);
+        var find = function(col) {
+          return row.children("td").eq(formatFields[col])
+        };
+        var values = {
+          format: find("Format").text().replace(/^\s+|\s+$/g, ""),
+          legality: find("Legality").text().replace(/^\s+|\s+$/g, "")
+        };
+        var legality = new models.Legality();
+        legality.set({
+          format: collections.formats[values.format],
+          legality: values.legality
+        });
+        printings.push(legality);
+      });
+
+      success(printings);
+    });
   }
 };
 
@@ -209,130 +327,15 @@ var app = {
     // Update each card
     .map(function(card) {
       var next = this;
-      var data = []
-      var multipart = false;
-
-      // Gets card details page
-      async.promise(function() {
-        requestPage(gatherer.card('details', card.gathererId()), this.success);
-      })
-
-      // Scrapes the details
-      .then(function($) {
-        var next = this;
-        var cards = $(".cardDetails");
-
-        $.fn.textifyImages = function() {
-          this.find("img").each(function() {
-            $(this).replaceWith($("<span>").text("{"+$(this).attr("alt")+"}"));
-          });
-          return this;
-        };
-
-        var text = function(elem) {
-          return elem.text().replace(/^\s+|\s+$/g, "");
-        };
-
-        var find = function(rows, search, negativeSearch) {
-          return rows.filter(function() {
-            var text = $(this).find(".label").text();
-            return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
-          }).first().find(".value").textifyImages();
-        };
-
-        // Detect flip and transform cards
-        if (cards.length > 1) {
-          multipart = {type: 'unknown'};
-          var rules = find(cards.find(".rightCol .row"), /text|rules/i).text();
-          if (rules.match(/transform/i)) multipart.type = 'transform';
-          if (rules.match(/flip/i)) multipart.type = 'flip';
-          multipart.cards = [];
-        }
-
-        cards.each(function() {
-          var rows = $(this).find(".rightCol .row");
-          var strength = util.zip(text(find(rows, /P\/T/i)).split(/\s*\/\s*/), ["power", "toughness"]);
-
-          var card = {
-            lastUpdated: new Date(),
-            name: text(find(rows, /name/i)),
-            cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
-            cmc: parseInt(text(find(rows, /converted mana cost/i))) || 0,
-            rules: find(rows, /text|rules/i).children().map(function() { return text($(this)); }).toArray(),
-            power: strength.power || '',
-            toughness: strength.toughness || '',
-            flavourText: text(find(rows, /flavor text/i)),
-            watermark: text(find(rows, /watermark/i)),
-            complete: true
-          };
-
-          var categories = util.zip(text(find(rows, /types/i)).split(/\s+—\s+/), ["types", "subtypes"]);
-
-          card.types = (categories.types || "").split(/\s+/).map(function(type) {
-            return collections.types[type];
-          }).filter(function(type) { return type; });
-
-          card.subtypes = (categories.subtypes || "").split(/\s+/).map(function(subtype) {
-            return collections.subtypes[subtype];
-          }).filter(function(subtype) { return subtype; });
-
-          if (multipart) multipart.cards.push(card.name);
-          data.push(card);
-        });
-
-        // Detect split cards
-        var name = $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
-        if (name.match(/\/\//)) {
-          multipart = {type: 'split'};
-          var names = name.split(/\s*\/\/\s*/);
-          var linked = card.name == names[0] ? names[1] : names[0];
-          multipart.cards = [card.name, linked];
-        }
-
-        data.map(function(card) {
-          card.multipart = multipart;
-        });
-
-        next.success();
-      })
-
-      // Gets printings page
-      .then(function() {
-        requestPage(gatherer.card('printings', card.gathererId()), this.success);
-      })
-
-      // Scrapes printings
-      .then(function($) {
-        var formats = $(".cardList:last");
-        var formatFields = {};
-        var details = data[0];
-        details.legalities = [];
-
-        formats.find("tr.headerRow td").each(function() {
-          var field = $(this).text().replace(/^\s+|\s+$/g, "")
-          formatFields[field] = $(this).prevAll().length;
-        });
-
-        formats.find("tr.cardItem").each(function() {
-          var row = $(this);
-          var find = function(col) {
-            return row.children("td").eq(formatFields[col])
-          };
-          var values = {
-            format: find("Format").text().replace(/^\s+|\s+$/g, ""),
-            legality: find("Legality").text().replace(/^\s+|\s+$/g, "")
-          };
-          var legality = new models.Legality();
-          legality.set({
-            format: collections.formats[values.format],
-            legality: values.legality
-          });
-          details.legalities.push(legality);
-        });
-
+      scraper.getCardDetails(card, collections, function(details) {
         console.log("Updating "+card.name);
         console.log(details);
-        delete details.multipart;
+        console.log(details[0].multipart);
+
+        //Form array of all cards, then map through and save...
+        //How to save multipart refs?
+        return next.success();
+
         card.set(details);
         card.save(next.success);
       });
