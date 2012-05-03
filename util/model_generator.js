@@ -1,5 +1,5 @@
 module.exports = function(mongoose, schemas) {
-  var utils = require('./node_modules/mongoose/lib/utils.js');
+  var utils = require('../node_modules/mongoose/lib/utils.js');
 
   // Sync method for adding/updating models
   var sync = function(criteria, success) {

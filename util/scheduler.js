@@ -1,4 +1,4 @@
-var scheduler = exports || {};
+var scheduler = exports;
 
 // Time units
 var units = [];

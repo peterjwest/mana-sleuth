@@ -1,4 +1,4 @@
-var util = exports || {};
+var util = exports;
 
 // Gets an array of all the keys of an object
 util.values = function(obj) {

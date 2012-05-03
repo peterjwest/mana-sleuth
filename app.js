@@ -1,42 +1,24 @@
+// Standard modules
 var request = require('request');
 var url = require('url');
 var http = require('http');
 var jquery = require("jquery");
 var jsdom = require('jsdom');
-var async = require('./async.js');
-var scheduler = require('./scheduler.js');
-var util = require('./util.js');
 var mongoose = require('mongoose');
+
+// Util modules
+var async = require('./util/async.js');
+var scheduler = require('./util/scheduler.js');
+var util = require('./util/util.js');
+var modelGenerator = require('./util/model_generator.js');
+
+// App modules
+var router = require('./router.js');
+var scraper = require('./scraper.js')(request, jsdom, jquery, util);
 var schemas = require('./schemas.js')(mongoose);
-var models = require('./models.js')(mongoose, schemas);
+var models = modelGenerator(mongoose, schemas);
 
 mongoose.connect('mongodb://localhost/mana_sleuth');
-
-// Gatherer routing
-var gatherer = {
-  domain: 'http://gatherer.wizards.com',
-  paths: {
-    advanced: '/Pages/Advanced.aspx?',
-    cards: '/Pages/Search/Default.aspx?',
-    details: '/Pages/Card/Details.aspx?',
-    original: '/Pages/Card/Details.aspx?printed=true&',
-    printings: '/Pages/Card/Printings.aspx?',
-    image: '/Handlers/Image.ashx?'
-  },
-  cards: function(expansion) {
-    var params = 'output=checklist&set=|['+encodeURIComponent('"'+expansion+'"')+']';
-    return this.domain+this.paths.cards+params;
-  },
-  card: function(type, id, query) {
-    if (!this.paths[type]) throw "Cannot find card resource type";
-    var imageType = (type == 'image' ? '&type=card' : '');
-    var queryString = 'multiverseid='+id+imageType+(query ? '&'+query : '');
-    return this.domain+this.paths[type]+queryString;
-  },
-  categories: function() {
-    return this.domain+this.paths.advanced;
-  }
-};
 
 // App settings
 var settings = {
@@ -47,197 +29,6 @@ var settings = {
     cards: {
       '74360': {artist: 'spork;'}
     }
-  }
-};
-
-// Gets the response of page and gives it to the callback function
-var requestPage = function(uri, success) {
-  var tries = 0;
-  var threshold = 3;
-  var attempt = function() {
-    tries++;
-    request({uri: uri}, function (error, response, html) {
-      if (html) {
-        jsdom.env(html, function (err, window) {
-          success(jquery.create(window));
-        });
-      }
-      else if (tries < threshold) attempt();
-    });
-  };
-  attempt();
-};
-
-var scraper = {
-  getCategories: function(success) {
-    requestPage(gatherer.categories(), function($) {
-      var conditions = $(".advancedSearchTable tr");
-
-      var find = function(search, negativeSearch) {
-        var match = conditions.filter(function() {
-          var text = $(this).find(".label2").text();
-          return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
-        }).first();
-
-        return match.find(".dynamicAutoComplete a").map(function() {
-          return $(this).text().replace(/^\s+|\s+$/g, "");
-        }).toArray();
-      };
-
-      success({
-        Expansion: find(/set|expansion/i),
-        Format: find(/format/i),
-        Block: find(/block/i),
-        Type: find(/type/i, /subtype/i),
-        Subtype: find(/subtype/i),
-        Rarity: find(/rarity/i)
-      });
-    });
-  },
-
-  getExpansionCards: function(expansion, success) {
-    requestPage(gatherer.cards(expansion.name), function($) {
-      var cards = {};
-      $(".cardItem").each(function() {
-        var $card = $(this);
-        var name = $card.find(".name").text();
-        var card = cards[name] || {printings: []};
-        cards[name] = card;
-
-        card.lastUpdated = new Date();
-        card.name = name;
-        card.colours = $card.find(".color").text().split("/")
-          .map(function(c) { return settings.colours[c]; })
-          .filter(function(c) { return c; });
-
-
-        card.printings.push({
-          gathererId: $card.find(".nameLink").attr("href").match(/multiverseid=(\d+)/i)[1],
-          artist: $card.find(".artist").text(),
-          expansion: expansion._id,
-          rarity: settings.rarities[$card.find(".rarity").text()]
-        });
-      });
-      success(util.values(cards));
-    });
-  },
-
-  getCardDetails: function(card, collections, success) {
-    requestPage(gatherer.card('details', card.gathererId()), function($) {
-      var cards = [];
-      var multipart = false;
-      var details = $(".cardDetails");
-
-      $.fn.textifyImages = function() {
-        this.find("img").each(function() {
-          $(this).replaceWith($("<span>").text("{"+$(this).attr("alt")+"}"));
-        });
-        return this;
-      };
-
-      var text = function(elem) {
-        return elem.text().replace(/^\s+|\s+$/g, "");
-      };
-
-      var find = function(rows, search, negativeSearch) {
-        return rows.filter(function() {
-          var text = $(this).find(".label").text();
-          return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
-        }).first().find(".value").textifyImages();
-      };
-
-      // Detect flip and transform cards
-      if (details.length > 1) {
-        multipart = {type: 'unknown'};
-        var rules = find(details.find(".rightCol .row"), /text|rules/i).text();
-        if (rules.match(/transform/i)) multipart.type = 'transform';
-        if (rules.match(/flip/i)) multipart.type = 'flip';
-        multipart.cards = [];
-      }
-
-      // Iterate through details
-      details.each(function() {
-        var rows = $(this).find(".rightCol .row");
-        var strength = util.zip(text(find(rows, /P\/T/i)).split(/\s*\/\s*/), ["power", "toughness"]);
-
-        var card = {
-          lastUpdated: new Date(),
-          name: text(find(rows, /name/i)),
-          cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
-          cmc: parseInt(text(find(rows, /converted mana cost/i))) || 0,
-          rules: find(rows, /text|rules/i).children().map(function() { return text($(this)); }).toArray(),
-          power: strength.power || '',
-          toughness: strength.toughness || '',
-          flavourText: text(find(rows, /flavor text/i)),
-          watermark: text(find(rows, /watermark/i)),
-          complete: true
-        };
-
-        var categories = util.zip(text(find(rows, /types/i)).split(/\s+—\s+/), ["types", "subtypes"]);
-
-        card.types = (categories.types || "").split(/\s+/).map(function(type) {
-          return collections.types[type];
-        }).filter(function(type) { return type; });
-
-        card.subtypes = (categories.subtypes || "").split(/\s+/).map(function(subtype) {
-          return collections.subtypes[subtype];
-        }).filter(function(subtype) { return subtype; });
-
-        if (multipart) multipart.cards.push(card.name);
-        cards.push(card);
-      });
-
-      // Detect split cards
-      var name = $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
-      if (name.match(/\/\//)) {
-        multipart = {type: 'split'};
-        var names = name.split(/\s*\/\/\s*/);
-        var linked = card.name == names[0] ? names[1] : names[0];
-        multipart.cards = [card.name, linked];
-      }
-
-      // Get card printings
-      scraper.getCardPrintings(card, collections, function(printings) {
-        cards.map(function(card) {
-          card.multipart = multipart;
-          card.printings = printings;
-        });
-
-        success(cards);
-      });
-    });
-  },
-
-  getCardPrintings: function(card, collections, success) {
-    requestPage(gatherer.card('printings', card.gathererId()), function($) {
-      var formats = $(".cardList:last");
-      var printings = [];
-
-      var formatFields = {};
-      formats.find("tr.headerRow td").each(function() {
-        var field = $(this).text().replace(/^\s+|\s+$/g, "")
-        formatFields[field] = $(this).prevAll().length;
-      });
-
-      formats.find("tr.cardItem").each(function() {
-        var row = $(this);
-        var find = function(col) {
-          return row.children("td").eq(formatFields[col])
-        };
-        var values = {
-          format: find("Format").text().replace(/^\s+|\s+$/g, ""),
-          legality: find("Legality").text().replace(/^\s+|\s+$/g, "")
-        };
-        var legality = new models.Legality();
-        legality.set({
-          format: collections.formats[values.format],
-          legality: values.legality
-        });
-        printings.push(legality);
-      });
-
-      success(printings);
-    });
   }
 };
 
@@ -260,7 +51,7 @@ var app = {
   // This uses the advanced search page to get category names like expansion, block, format, rarity
   updateCategories: function(callback) {
     console.log("Updating categories");
-    scraper.getCategories(function(values) {
+    scraper.getCategories(router.categories(), function(values) {
       var expansions = [];
 
       // Iterates through different models and saves them
@@ -289,7 +80,7 @@ var app = {
   // This uses the card search list view page to get basic details of cards in an expansion
   populateExpansion: function(expansion, callback) {
     console.log("Finding cards for "+expansion.name);
-    scraper.getExpansionCards(expansion, function(cards) {
+    scraper.getExpansionCards(router.cards(expansion.name), function(cards) {
       async.map(cards, function(details) {
         var next = this;
         models.Card.sync({name: details.name}, function(card) {
@@ -327,10 +118,9 @@ var app = {
     // Update each card
     .map(function(card) {
       var next = this;
-      scraper.getCardDetails(card, collections, function(details) {
+      scraper.getCardDetails(router.card(card.gathererId()), function(details) {
         console.log("Updating "+card.name);
         console.log(details);
-        console.log(details[0].multipart);
 
         //Form array of all cards, then map through and save...
         //How to save multipart refs?
