@@ -30,7 +30,8 @@ module.exports = function(mongoose) {
     subtypes: [Schema.ObjectId],
     printings: [schemas.Printing],
     legalities: [schemas.Legality],
-    complete: {type: Boolean, default: false}
+    complete: {type: Boolean, default: false},
+    alternateSplitCard: {type: Boolean, default: false}
   });
 
   schemas.Multipart = new Schema({
