@@ -38,9 +38,9 @@ var app = {
   // Get card category collections from the database
   getCollections: function(categories) {
     var collections = {};
-    return async.map(categories, function(name) {
+    return async.map(categories, function(category) {
       var next = this;
-      var model = models[name];
+      var model = models[category];
       model.find(function(err, data) {
         collections[model.collectionName] = util.hash(data, function(item) { return item.name; });
         next.success();
@@ -49,18 +49,22 @@ var app = {
   },
 
   // This uses the advanced search page to get category names like expansion, block, format, rarity
-  updateCategories: function(callback) {
+  updateCategories: function(success) {
     console.log("Updating categories");
     scraper.getCategories(router.categories(), function(values) {
-      var expansions = [];
+      var collections = {};
 
       // Iterates through different models and saves them
       async.map(settings.categories, function(category) {
+        var model = models[category];
+        collections[model.collectionName] = {};
+
         async.map(values[category], function(name) {
           var next = this;
           var details = {name: name};
-          models[category].sync(details, function(item) {
-            if (category == "Expansion" && !item.populated) expansions.push(item);
+
+          model.sync(details, function(item) {
+            collections[model.collectionName][item.name] = item;
             item.set(details);
             item.save(next.success);
           });
@@ -70,21 +74,37 @@ var app = {
       // Iterates through new expansions and populates cards for them
       .then(function() {
         console.log("Updated "+settings.categories.length+ " categories");
-        async.map(expansions, function(expansion) {
-          app.populateExpansion(expansion, this.success);
-        }).then(function() { if(callback) callback(); });
+
+        var unpopulated = util.values(collections.expansions)
+          .filter(function(e) { return !e.populated; });
+
+        async.map(unpopulated, function(expansion) {
+          app.populateCardsByExpansion(expansion, collections, this.success);
+        }).then(function() { if(success) success(); });
       });
     });
   },
 
   // This uses the card search list view page to get basic details of cards in an expansion
-  populateExpansion: function(expansion, callback) {
+  populateCardsByExpansion: function(expansion, collections, success) {
     console.log("Finding cards for "+expansion.name);
     scraper.getExpansionCards(router.cards(expansion.name), function(cards) {
       async.map(cards, function(details) {
         var next = this;
         models.Card.sync({name: details.name}, function(card) {
+
+          details.colours = details.colours
+            .map(function(c) { return settings.colours[c]; })
+            .filter(function(c) { return c; });
+
+          details.printings = details.printings.map(function(p) {
+            p.expansion = expansion._id;
+            p.rarity = settings.rarities[p.rarity];
+            return p;
+          });
+
           details.printings = card.printings.concat(details.printings);
+
           card.set(details);
           card.save(next.success);
         });
@@ -93,18 +113,19 @@ var app = {
         console.log("Found "+cards.length+" cards");
         expansion.populated = true;
         expansion.save(function() {
-          if (callback) callback();
+          if (success) success();
         });
       });
     });
   },
 
   // This uses the card details and printings pages to get the full details of a card
-  updateCards: function(callback) {
+  updateCards: function(success) {
     console.log("Updating cards");
+    var collections = {};
+    var cards = {};
 
     // Get required collections from the database
-    var collections = {};
     app.getCollections(settings.categories).then(function(data) {
       collections = data;
       this.success();
@@ -115,15 +136,44 @@ var app = {
       models.Card.lastUpdated(100, this.success);
     })
 
+    // Create hash of cards (needed for updating multipart cards)
+    .then(function(data) {
+      cards = util.hash(data, function(card) { return card.name });
+      this.success(data);
+    })
+
     // Update each card
     .map(function(card) {
       var next = this;
       scraper.getCardDetails(router.card(card.gathererId()), function(details) {
         console.log("Updating "+card.name);
-        console.log(details);
 
-        //Form array of all cards, then map through and save...
-        //How to save multipart refs?
+        details.cards.map(function(card) {
+          card.types = card.types.map(function(type) {
+            return collections.types[type];
+          }).filter(function(type) { return type; });
+
+          card.subtypes = card.subtypes.map(function(subtype) {
+            return collections.subtypes[subtype];
+          }).filter(function(subtype) { return subtype; });
+
+          card.legalities.map(function(legality) {
+            legality.format = collections.formats[legality.format];
+          });
+        });
+
+        console.log(details);
+        if (details.multipart && details.multipart.type == "split") {
+          var alt = util.alternate(details.multipart.cards, card.name);
+          models.Card.findOne({name: alt}, function(err, card) {
+            if (card) {
+              console.log(card);
+            }
+          });
+        };
+
+        // Form array of all cards, then map through and save...
+        // How to save multipart refs?
         return next.success();
 
         card.set(details);
@@ -131,7 +181,7 @@ var app = {
       });
     })
     .then(function() {
-      if (callback) callback();
+      if (success) success();
     });
   }
 };

@@ -57,16 +57,11 @@ module.exports = function(request, jsdom, jquery, util) {
         card.lastUpdated = new Date();
         card.name = name;
         card.colours = $card.find(".color").text().split("/");
-          // .map(function(c) { return settings.colours[c]; })
-          // .filter(function(c) { return c; });
-
 
         card.printings.push({
           gathererId: $card.find(".nameLink").attr("href").match(/multiverseid=(\d+)/i)[1],
           artist: $card.find(".artist").text(),
-          //expansion: expansion._id,
           rarity: $card.find(".rarity").text()
-          // rarity: settings.rarities[$card.find(".rarity").text()]
         });
       });
       success(util.values(cards));
@@ -78,6 +73,7 @@ module.exports = function(request, jsdom, jquery, util) {
       var cards = [];
       var multipart = false;
       var details = $(".cardDetails");
+      var card = {};
 
       $.fn.textifyImages = function() {
         this.find("img").each(function() {
@@ -111,7 +107,7 @@ module.exports = function(request, jsdom, jquery, util) {
         var rows = $(this).find(".rightCol .row");
         var strength = util.zip(text(find(rows, /P\/T/i)).split(/\s*\/\s*/), ["power", "toughness"]);
 
-        var card = {
+        card = {
           lastUpdated: new Date(),
           name: text(find(rows, /name/i)),
           cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
@@ -145,26 +141,24 @@ module.exports = function(request, jsdom, jquery, util) {
       if (name.match(/\/\//)) {
         multipart = {type: 'split'};
         var names = name.split(/\s*\/\/\s*/);
-        var linked = card.name == names[0] ? names[1] : names[0];
-        multipart.cards = [card.name, linked];
+        multipart.cards = [card.name, util.alternate(names, card.name)];
       }
 
-      // Get card printings
-      scraper.getCardPrintings(urls.printings, function(printings) {
+      // Get card legalities
+      scraper.getCardLegalities(urls.printings, function(legalities) {
         cards.map(function(card) {
-          card.multipart = multipart;
-          card.printings = printings;
+          card.legalities = legalities;
         });
 
-        success(cards);
+        success({cards: cards, multipart: multipart});
       });
     });
   };
 
-  scraper.getCardPrintings = function(url, success) {
+  scraper.getCardLegalities = function(url, success) {
     scraper.requestPage(url, function($) {
       var formats = $(".cardList:last");
-      var printings = [];
+      var legalities = [];
 
       var formatFields = {};
       formats.find("tr.headerRow td").each(function() {
@@ -177,24 +171,18 @@ module.exports = function(request, jsdom, jquery, util) {
         var find = function(col) {
           return row.children("td").eq(formatFields[col])
         };
-        var values = {
+        legalities.push({
           format: find("Format").text().replace(/^\s+|\s+$/g, ""),
           legality: find("Legality").text().replace(/^\s+|\s+$/g, "")
-        };
+        });
         //var legality = new models.Legality();
         // legality.set({
-        //   format: values.format,
         //   format: collections.formats[values.format],
         //   legality: values.legality
         // });
-        var legality = {
-          format: values.format,
-          legality: values.legality
-        };
-        printings.push(legality);
       });
 
-      success(printings);
+      success(legalities);
     });
   };
 
