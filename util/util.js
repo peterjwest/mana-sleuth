@@ -35,3 +35,6 @@ util.between = function(min, max) { return Math.random()*(max - min) + min };
 
 // Runs a callback after a set amount of time
 util.after = function(time, fn) { setTimeout(fn, time); };
+
+// Finds the alternate value in an array of two values
+util.alternate = function(array, item) { return array[0] == item ? array[1] : array[0]; };
