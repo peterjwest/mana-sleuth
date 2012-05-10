@@ -11,3 +11,4 @@ Then it uses (read: will use) some clever tricks to find exactly the cards you w
  - Better handling of request failure, save failure - logging?
  - Save block/expansion relationships
  - Store images on S3
+ - Double update bug for split cards

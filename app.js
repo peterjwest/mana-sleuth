@@ -3,7 +3,8 @@ var request = require('request');
 var url = require('url');
 var http = require('http');
 var jquery = require("jquery");
-var jsdom = require('jsdom');
+// var jsdom = require('jsdom');
+var cheerio = require("cheerio");
 var mongoose = require('mongoose');
 
 // Util modules
@@ -14,7 +15,7 @@ var modelGenerator = require('./util/model_generator.js');
 
 // App modules
 var router = require('./router.js');
-var scraper = require('./scraper.js')(request, jsdom, jquery, util);
+var scraper = require('./scraper.js')(request, cheerio, jquery, util);
 var schemas = require('./schemas.js')(mongoose);
 var models = modelGenerator(mongoose, schemas);
 
@@ -119,68 +120,129 @@ var app = {
     });
   },
 
-  // This uses the card details and printings pages to get the full details of a card
-  updateCards: function(success) {
-    console.log("Updating cards");
-    var collections = {};
-    var cards = {};
+  // Loops through updating cards
+  updateCards: function(count, success) {
 
     // Get required collections from the database
-    app.getCollections(settings.categories).then(function(data) {
-      collections = data;
+    app.getCollections(settings.categories)
+
+    // Update cards
+    .then(function(collections) {
+
+      // Track memory
+      var lastMemory = 0;
+      var memory = process.memoryUsage().rss;
+      var humanisedMemory = function(bytes) { return (bytes/1024)/1024; }
+
+      console.log("Updating cards");
+      var run = function() {
+        if (count == 0) return console.log("Finished");
+        count--;
+        memory = process.memoryUsage().rss;
+        console.log("Memory: "+humanisedMemory(memory)+" MB ("+humanisedMemory(memory-lastMemory)+" MB change), "+count+" cards left");
+        lastMemory = memory;
+        process.memoryUsage().rss
+        setTimeout(function() { app.updateCard(collections, run); }, 0);
+      };
+      run();
+    });
+  },
+
+  // This uses the card details and printings pages to get the full details of a card
+  updateCard: function(collections, success) {
+    var cards = [];
+    var details = {cards: []};
+
+    // Get the card last updated
+    async.promise(function() {
+      var next = this;
+      models.Card.lastUpdated()
+        .where('printings.expansion').nin([
+            collections.expansions.Unglued,
+            collections.expansions.Unhinged,
+        ])
+        .run(function(err, card) { next.success(card) });
+    })
+
+    // Scrap card details
+    .then(function(card) {
+      console.log("Updating "+card.name);
+      cards.push(card);
+      scraper.getCardDetails(router.card(card.gathererId()), this.success);
+    })
+
+    // Substitute database references
+    .then(function(data) {
+      details = data;
+
+      details.cards.map(function(card) {
+        card.types = card.types.map(function(type) {
+          return collections.types[type];
+        }).filter(function(type) { return type; });
+
+        card.subtypes = card.subtypes.map(function(subtype) {
+          return collections.subtypes[subtype];
+        }).filter(function(subtype) { return subtype; });
+
+        card.legalities.map(function(legality) {
+          legality.format = collections.formats[legality.format];
+        });
+      });
+
       this.success();
     })
 
-    // Get the cards which need updating
+    // Handle multipart cards
     .then(function() {
-      models.Card.lastUpdated(100, this.success);
-    })
-
-    // Create hash of cards (needed for updating multipart cards)
-    .then(function(data) {
-      cards = util.hash(data, function(card) { return card.name });
-      this.success(data);
-    })
-
-    // Update each card
-    .map(function(card) {
       var next = this;
-      scraper.getCardDetails(router.card(card.gathererId()), function(details) {
-        console.log("Updating "+card.name);
 
-        details.cards.map(function(card) {
-          card.types = card.types.map(function(type) {
-            return collections.types[type];
-          }).filter(function(type) { return type; });
+      if (details.multipart) {
+        async.promise(function() {
+          var next = this;
+          var altName = util.alternate(details.multipart.cards, cards[0].name);
+          models.Card.findOne({name: altName}, function(err, card) { next.success(card); });
+        })
 
-          card.subtypes = card.subtypes.map(function(subtype) {
-            return collections.subtypes[subtype];
-          }).filter(function(subtype) { return subtype; });
+        .then(function(card) {
+          console.log("Updating "+card.name+" (multipart)");
+          cards.push(card);
 
-          card.legalities.map(function(legality) {
-            legality.format = collections.formats[legality.format];
-          });
+          var altCard = cards[0].name == details.cards[0].name ? cards[1] : cards[0];
+          if (details.multipart.type == "split") {
+            scraper.getCardDetails(router.card(altCard.gathererId(), altCard.name), function(data) {
+              details.cards = details.cards.concat(data.cards);
+              next.success();
+            });
+          }
+          else next.success();
         });
-
-        console.log(details);
-        if (details.multipart && details.multipart.type == "split") {
-          var alt = util.alternate(details.multipart.cards, card.name);
-          models.Card.findOne({name: alt}, function(err, card) {
-            if (card) {
-              console.log(card);
-            }
-          });
-        };
-
-        // Form array of all cards, then map through and save...
-        // How to save multipart refs?
-        return next.success();
-
-        card.set(details);
-        card.save(next.success);
-      });
+      }
+      else next.success();
     })
+
+    // Save cards
     .then(function() {
+      var cardDetails = util.hash(details.cards, function(card) { return card.name; });
+      async.map(cards, function(card) {
+        card.set(cardDetails[card.name]);
+
+        //Set multipart details
+        if (details.multipart) {
+          card.set({multipart: {
+            card: util.alternate(cards, card)._id,
+            type: details.multipart.type
+          }});
+        }
+
+        card.save(this.success);
+      }).then(this.success);
+    })
+
+    .then(function() {
+      // details = null;
+      // cards = null;
+
+      console.log("Updated");
       if (success) success();
     });
   }
@@ -189,8 +251,15 @@ var app = {
 // scheduler.every('2 days', 'findCards', app.findCards);
 
 async.promise(function() {
-  app.updateCategories(this.success);
-}).then(function() {
-  app.updateCards();
-  //scheduler.every('30 minutes', 'updateCards', app.updateCards);
+//   app.updateCategories(this.success);
+// }).then(function() {
+  app.updateCards(4300);
 });
+
+// {
+//   "printings.expansion": { $nin: [
+//     ObjectId("4fa5ca4f3c02895c11000182"),
+//     ObjectId("4fa5ca4f3c02895c11000181")
+//   ] },
+//   complete: false
+// }

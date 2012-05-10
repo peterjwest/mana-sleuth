@@ -22,7 +22,6 @@ module.exports = function(mongoose) {
     cmc: Number,
     colours: [String],
     rules: [String],
-    multipart: Schema.ObjectId,
     lastUpdated: Date,
     flavourText: String,
     watermark: String,
@@ -30,13 +29,11 @@ module.exports = function(mongoose) {
     subtypes: [Schema.ObjectId],
     printings: [schemas.Printing],
     legalities: [schemas.Legality],
-    complete: {type: Boolean, default: false},
-    alternateSplitCard: {type: Boolean, default: false}
-  });
-
-  schemas.Multipart = new Schema({
-    cards: [Schema.ObjectId],
-    type: {type: String, match: /^flip|split|transform$/}
+    multipart: {
+      card: Schema.ObjectId,
+      type: {type: String, match: /^flip|split|transform$/}
+    },
+    complete: {type: Boolean, default: false}
   });
 
   schemas.Expansion = new Schema({

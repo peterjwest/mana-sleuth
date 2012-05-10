@@ -15,11 +15,11 @@ router.cards = function(expansion) {
   return router.domain + router.paths.cards+params;
 };
 
-router.card = function(id, query) {
+router.card = function(id, part) {
   var urls = {};
   ['details', 'printings'].map(function(type) {
     //var imageType = (type == 'image' ? '&type=card' : '');
-    var queryString = 'multiverseid=' + id + (query ? '&'+query : '');
+    var queryString = 'multiverseid=' + id + (part ? '&part='+part : '');
     urls[type] = router.domain + router.paths[type] + queryString;
   });
   return urls;
