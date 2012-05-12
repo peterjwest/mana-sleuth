@@ -121,7 +121,7 @@ var app = {
   },
 
   // Loops through updating cards
-  updateCards: function(count, success) {
+  updateCards: function(success) {
 
     // Get required collections from the database
     app.getCollections(settings.categories)
@@ -136,10 +136,8 @@ var app = {
 
       console.log("Updating cards");
       var run = function() {
-        if (count == 0) return console.log("Finished");
-        count--;
         memory = process.memoryUsage().rss;
-        console.log("Memory: "+humanisedMemory(memory)+" MB ("+humanisedMemory(memory-lastMemory)+" MB change), "+count+" cards left");
+        console.log("Memory: "+humanisedMemory(memory)+" MB ("+humanisedMemory(memory-lastMemory)+" MB change)");
         lastMemory = memory;
         process.memoryUsage().rss
         setTimeout(function() { app.updateCard(collections, run); }, 0);
@@ -156,19 +154,17 @@ var app = {
     // Get the card last updated
     async.promise(function() {
       var next = this;
-      models.Card.lastUpdated()
-        // .where('printings.expansion').nin([
-        //     collections.expansions.Unglued,
-        //     collections.expansions.Unhinged,
-        // ])
-        .run(function(err, card) { next.success(card) });
+      models.Card.lastUpdated().run(function(err, card) { next.success(card) });
     })
 
     // Scrap card details
     .then(function(card) {
-      console.log("Updating "+card.name);
-      cards.push(card);
-      scraper.getCardDetails(router.card(card.gathererId()), this.success);
+      if (card) {
+        console.log("Updating "+card.name);
+        cards.push(card);
+        scraper.getCardDetails(router.card(card.gathererId()), this.success);
+      }
+      else console.log("Finished");
     })
 
     // Apply fixtures and substitute database references
@@ -177,8 +173,8 @@ var app = {
 
       details.cards.map(function(card) {
 
-        // Applying card fixtures
-        var applyFixtures = function(item, fixtures) {
+        // Applying replacements
+        var applyReplacements = function(item, fixtures) {
           for (i in fixtures) {
             if (typeof fixtures[i] == "Object" || typeof fixtures[i] == 'Array') {
               if (typeof fixtures[i] == 'Array') item[i] = [];
@@ -188,14 +184,15 @@ var app = {
           }
         };
 
-        // Applying category fixtures
+        // Applying type replacement fixtures
         var type = card.types.join(" ");
-        if (fixtures.replacements[type]) {
-          applyFixtures(card, fixtures.replacements[type])
+        if (fixtures.replacements[type] !== null) {
+          applyReplacements(card, fixtures.replacements[type])
         }
 
+        // Applying card replacement fixtures
         if (fixtures.cards[card.name]) {
-          applyFixtures(card, fixtures.cards[card.name]);
+          applyReplacements(card, fixtures.cards[card.name]);
         }
 
         card.types = card.types.map(function(type) {
@@ -268,15 +265,7 @@ var app = {
 };
 
 async.promise(function() {
-//   app.updateCategories(this.success);
-// }).then(function() {
-  app.updateCards(4300);
+  app.updateCategories(this.success);
+}).then(function() {
+  app.updateCards();
 });
-
-// {
-//   "printings.expansion": { $nin: [
-//     ObjectId("4fa5ca4f3c02895c11000182"),
-//     ObjectId("4fa5ca4f3c02895c11000181")
-//   ] },
-//   complete: false
-// }

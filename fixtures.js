@@ -3,6 +3,7 @@ var fixtures = exports;
 // These are for categories (e.g. type, subtype) not included in the gatherer database
 fixtures.collections = {
   Type: [
+    {name: "Token", genuine: true},
     {name: "Eaturecray", genuine: false}
   ],
   Subtype: [
@@ -39,7 +40,7 @@ fixtures.replacements = {
   'Summon': {types: ['Creature']},
   'Enchant Creature': {types: ['Enchantment'], subtypes: ['Aura']},
   'Enchant Player': {types: ['Enchantment'], subtypes: ['Aura']},
-  '': {types: ['Token']}
+  '(none)': {types: ['Token']}
 };
 
 // These are fixes for particular cards
