@@ -52,11 +52,13 @@ module.exports = function(mongoose) {
   });
 
   schemas.Type = new Schema({
-    name: String
+    name: String,
+    genuine: {type: Boolean, default: true}
   });
 
   schemas.Subtype = new Schema({
-    name: String
+    name: String,
+    genuine: {type: Boolean, default: true}
   });
 
   // Method to find gatherer id for a card
