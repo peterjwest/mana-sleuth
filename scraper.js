@@ -97,7 +97,7 @@ module.exports = function(request, cheerio, jquery, util) {
       var cards = details.toArray().map(function(self) {
         var rows = $(self).find(".rightCol .row");
         var strength = util.zip(
-          text(find(rows, /P\/T/i)).split(/\s*\/\s*/),
+          text(find(rows, /P\/T/i)).split(/ \/ /),
           ["power", "toughness"]
         );
 
@@ -105,8 +105,8 @@ module.exports = function(request, cheerio, jquery, util) {
           lastUpdated: new Date(),
           name: text(find(rows, /name/i)),
           cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
-          cmc: parseInt(text(find(rows, /converted mana cost/i))) || 0,
-          rules: find(rows, /text|rules/i).children().toArray()
+          cmc: parseFloat(text(find(rows, /converted mana cost/i))) || 0,
+          rules: find(rows, /text|rules/i, /flavor text/i).children().toArray()
             .map(function(self) { return text($(self)); })
             .filter(function(rule) { return rule; }),
           power: strength.power || '',

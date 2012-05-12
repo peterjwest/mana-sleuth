@@ -18,6 +18,7 @@ var router = require('./router.js');
 var scraper = require('./scraper.js')(request, cheerio, jquery, util);
 var schemas = require('./schemas.js')(mongoose);
 var models = modelGenerator(mongoose, schemas);
+var fixtures = require('./fixtures.js');
 
 mongoose.connect('mongodb://localhost/mana_sleuth');
 
@@ -26,74 +27,6 @@ var settings = {
   colours: {Green: 'G', Black: 'B', Blue: 'U', Red: 'R', White: 'W'},
   rarities: {L: 'Land', C: 'Common', U: 'Uncommon', R: 'Rare', M: 'Mythic Rare', P: 'Promo', S: 'Special'},
   categories: ['Type', 'Subtype', 'Expansion', 'Block', 'Format']
-};
-
-var fixtures = {
-  cards: {
-    "B.F.M. (Big Furry Monster)": {
-      subtypes: ["The-Biggest-Baddest-Nastiest-Scariest-Creature-You'll-Ever-See"],
-      rules: [
-        "You must play both B.F.M. cards to put B.F.M. into play. "+
-        "If either B.F.M. card leaves play, sacrifice the other.",
-        "B.F.M. can be blocked only by three or more creatures."
-      ],
-      flavourText:
-        "\"It was big. Really, really big. No, bigger than that. Even bigger. "+
-        "Keep going. More. No, more. Look, we're talking krakens and dreadnoughts for jewelry. "+
-        "It was big\"\n-Arna Kennerd, skyknight",
-      multipart: {type: 'double'},
-      printings: [
-        {gathererId: 9780},
-        {gathererId: 9844},
-      ]
-    },
-    "Look at Me, I'm R&D": {
-      printings: [{artist: 'spork;'}]
-    },
-    "Miss Demeanor": {
-      subtypes: ["Lady-of-Proper-Etiquette"]
-    },
-    "Who/What/When/Where/Why": {
-      name: "Who",
-      types: ["Instant"],
-      rules: ["Target player gains X life."],
-      cmc: ["1"],
-      colors: ["W"],
-      cost: "{X}{W}"
-    }
-  },
-  subtypes: [
-    "The-Biggest-Baddest-Nastiest-Scariest-Creature-You'll-Ever-See",
-    "Donkey",
-    "Lord",
-    "Igpay",
-    "Townsfolk",
-    "Chicken",
-    "Egg",
-    "Gamer",
-    "Clamfolk",
-    "Elves",
-    "Hero",
-    "Bureaucrat",
-    "Goblins",
-    "Mime",
-    "Cow",
-    "Child",
-    "Lady-of-Proper-Etiquette",
-    "Waiter",
-    "Dinosaur",
-    "Paratrooper",
-    "Designer",
-    "Ship",
-    "Mummy"
-  ],
-  replaceTypes: {
-    'Interrupt': {types: ['Instant']},
-    'Summon Legend': {types: ['Legendary', 'Creature']},
-    'Summon': {types: ['Creature']},
-    'Enchant Creature': {types: ['Enchantment'], subtypes: ['Aura'], rules: ["Enchant Creature"]},
-    'Enchant Player': {types: ['Enchantment'], subtypes: ['Aura'], rules: ["Enchant Player"]},
-  }
 };
 
 // App functionality
@@ -123,11 +56,15 @@ var app = {
         var model = models[category];
         collections[model.collectionName] = {};
 
-        async.map(values[category], function(name) {
-          var next = this;
-          var details = {name: name};
+        var data = values[category].map(function(name) { return {name: name}; });
+        if (fixtures.collections[category]) {
+          data = fixtures.collections[category].concat(data);
+        }
 
-          model.sync(details, function(item) {
+        async.map(data, function(details) {
+          var next = this;
+
+          model.sync({name: details.name}, function(item) {
             collections[model.collectionName][item.name] = item;
             item.set(details);
             item.save(next.success);
@@ -234,22 +171,28 @@ var app = {
       scraper.getCardDetails(router.card(card.gathererId()), this.success);
     })
 
-    // Substitute database references
+    // Apply fixtures and substitute database references
     .then(function(data) {
       details = data;
 
-      // Adjusting data to the database structure, applying fixtures
       details.cards.map(function(card) {
 
-        // Applying fixtures
+        // Applying card fixtures
         var applyFixtures = function(item, fixtures) {
           for (i in fixtures) {
             if (typeof fixtures[i] == "Object" || typeof fixtures[i] == 'Array') {
+              if (typeof fixtures[i] == 'Array') item[i] = [];
               applyFixtures(item[i], fixtures[i]);
             }
             else item[i] = fixtures[i];
           }
         };
+
+        // Applying category fixtures
+        var type = card.types.join(" ");
+        if (fixtures.replacements[type]) {
+          applyFixtures(card, fixtures.replacements[type])
+        }
 
         if (fixtures.cards[card.name]) {
           applyFixtures(card, fixtures.cards[card.name]);
@@ -313,22 +256,16 @@ var app = {
           }});
         }
 
-        // card.save(this.success);
-        console.log(card);
+        card.save(this.success);
       }).then(this.success);
     })
 
     .then(function() {
-      // details = null;
-      // cards = null;
-
       console.log("Updated");
       if (success) success();
     });
   }
 };
-
-// scheduler.every('2 days', 'findCards', app.findCards);
 
 async.promise(function() {
 //   app.updateCategories(this.success);
