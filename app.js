@@ -2,8 +2,6 @@
 var request = require('request');
 var url = require('url');
 var http = require('http');
-var jquery = require("jquery");
-// var jsdom = require('jsdom');
 var cheerio = require("cheerio");
 var mongoose = require('mongoose');
 
@@ -15,7 +13,7 @@ var modelGenerator = require('./util/model_generator.js');
 
 // App modules
 var router = require('./router.js');
-var scraper = require('./scraper.js')(request, cheerio, jquery, util);
+var scraper = require('./scraper.js')(request, cheerio, util);
 var schemas = require('./schemas.js')(mongoose);
 var models = modelGenerator(mongoose, schemas);
 var fixtures = require('./fixtures.js');

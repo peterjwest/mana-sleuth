@@ -6,9 +6,8 @@
   "dependencies": {
     "express": ">= 2.5.6",
     "request": ">= 2.9.3",
-    "jsdom": ">= 0.2.10",
-    "jquery": ">= 1.6.3",
-    "mongoose": ">= 2.4.10"
+    "mongoose": ">= 2.4.10",
+    "cheerio": ">= 0.7.0"
   },
   "engine": "node >= 0.6.7"
 }

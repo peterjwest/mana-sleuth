@@ -1,4 +1,4 @@
-module.exports = function(request, cheerio, jquery, util) {
+module.exports = function(request, cheerio, util) {
   var scraper = {};
 
   // Gets the response of page and gives it to the callback function
@@ -8,12 +8,7 @@ module.exports = function(request, cheerio, jquery, util) {
     var attempt = function() {
       tries++;
       request({uri: uri}, function (error, response, html) {
-        if (html) {
-          success(cheerio.load(html));
-          // jsdom.env(html, function (err, window) {
-          //   success(jquery.create(window));
-          // });
-        }
+        if (html) success(cheerio.load(html));
         else if (tries < threshold) attempt();
       });
     };
