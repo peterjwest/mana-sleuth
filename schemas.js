@@ -31,7 +31,7 @@ module.exports = function(mongoose) {
     legalities: [schemas.Legality],
     multipart: {
       card: Schema.ObjectId,
-      type: {type: String, match: /^flip|split|transform$/}
+      type: {type: String, match: /^flip|split|transform|double$/}
     },
     complete: {type: Boolean, default: false}
   });
