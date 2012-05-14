@@ -127,7 +127,7 @@ module.exports = function(request, cheerio, util) {
         var rules = find(details.find(".rightCol .row"), /text|rules/i).text();
         if (rules.match(/transform/i)) multipart.type = 'transform';
         if (rules.match(/flip/i)) multipart.type = 'flip';
-        multipart.cards = util.pluck(cards, 'name');
+        multipart.cards = util.map(cards, util.key('name'));
       }
 
       // Detect split cards

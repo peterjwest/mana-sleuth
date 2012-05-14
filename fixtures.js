@@ -1,7 +1,7 @@
 var fixtures = exports;
 
-// These are for categories (e.g. type, subtype) not included in the gatherer database
-fixtures.collections = {
+// These are additions for categories (e.g. type, subtype) not included in the gatherer database
+fixtures.additions = {
   Type: [
     {name: "Token", genuine: true},
     {name: "Eaturecray", genuine: false}
@@ -33,6 +33,22 @@ fixtures.collections = {
   ]
 };
 
+// These are removals for invald categories in the gatherer database
+fixtures.removals = {
+  Type: [
+    {name: "Plane"},
+    {name: "Ongoing"},
+    {name: "Vanguard"},
+    {name: "Scheme"},
+  ],
+  Subtype: [
+    {name: "Shadowmoor"},
+    {name: "Lorwyn"},
+    {name: "Mirrodin"},
+    {name: "Zendikar"},
+  ]
+};
+
 // These replace outdated types with their modern equivalent
 fixtures.replacements = {
   'Interrupt': {types: ['Instant']},
@@ -41,6 +57,11 @@ fixtures.replacements = {
   'Enchant Creature': {types: ['Enchantment'], subtypes: ['Aura']},
   'Enchant Player': {types: ['Enchantment'], subtypes: ['Aura']},
   '(none)': {types: ['Token']}
+};
+
+// Removes the erratically used 'Land' rarity
+fixtures.rarities = {
+  'Land': {rarity: 'Common'}
 };
 
 // These are fixes for particular cards
@@ -72,4 +93,3 @@ fixtures.cards = {
     cost: "{1/2W}"
   }
 };
-

@@ -38,3 +38,6 @@ util.after = function(time, fn) { setTimeout(fn, time); };
 
 // Finds the alternate value in an array of two values
 util.alternate = function(array, item) { return array[0] === item ? array[1] : array[0]; };
+
+// Returns an object which finds a key
+util.key = function(key) { return function(obj) { return obj[key] }; };

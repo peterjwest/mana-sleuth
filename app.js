@@ -23,7 +23,7 @@ mongoose.connect('mongodb://localhost/mana_sleuth');
 // App settings
 var settings = {
   colours: {Green: 'G', Black: 'B', Blue: 'U', Red: 'R', White: 'W'},
-  rarities: {L: 'Land', C: 'Common', U: 'Uncommon', R: 'Rare', M: 'Mythic Rare', P: 'Promo', S: 'Special'},
+  rarities: {C: 'Common', U: 'Uncommon', R: 'Rare', M: 'Mythic Rare', P: 'Promo', S: 'Special'},
   categories: ['Type', 'Subtype', 'Expansion', 'Block', 'Format']
 };
 
@@ -55,13 +55,21 @@ var app = {
         collections[model.collectionName] = {};
 
         var data = values[category].map(function(name) { return {name: name}; });
-        if (fixtures.collections[category]) {
-          data = fixtures.collections[category].concat(data);
+
+        // Removes invalid categories
+        if (fixtures.removals[category]) {
+          var removals = util.hash(fixtures.removals[category], util.key('name'));
+          data = data.filter(function(item) { return !removals[item.name]; });
         }
 
+        // Adds additional categories
+        if (fixtures.additions[category]) {
+          data = fixtures.additions[category].concat(data);
+        }
+
+        // Save categories
         async.map(data, function(details) {
           var next = this;
-
           model.sync({name: details.name}, function(item) {
             collections[model.collectionName][item.name] = item;
             item.set(details);
@@ -100,6 +108,10 @@ var app = {
             p.expansion = expansion._id;
             p.rarity = settings.rarities[p.rarity];
             return p;
+
+            if (fixtures.rarities[p.rarity]) {
+              p.rarity = fixtures.rarities[p.rarity].rarity;
+            }
           });
 
           details.printings = card.printings.concat(details.printings);
@@ -259,7 +271,9 @@ var app = {
       console.log("Updated");
       if (success) success();
     });
-  }
+  },
+
+  decodeSearch: function() {}
 };
 
 async.promise(function() {
@@ -267,3 +281,24 @@ async.promise(function() {
 }).then(function() {
   app.updateCards();
 });
+
+var express = require('express');
+var less = require('connect-lesscss');
+
+var server = express.createServer();
+server.get('/', function(request, response) {
+    response.render('index', {title: "Mana Sleuth", subtitle: "Streamlined MTG card search"});
+});
+
+server.configure(function() {
+  server.set('views', __dirname + '/views');
+  server.set('view engine', 'jade');
+  server.use(express.static(__dirname + '/public'));
+  server.use("/css/styles.css", less("public/less/styles.less", {paths: ["public/less"]}));
+});
+
+server.configure('development', function() {
+  server.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
+});
+
+server.listen(3000);
