@@ -7,7 +7,7 @@ fixtures.additions = {
     {name: "Eaturecray", genuine: false}
   ],
   Subtype: [
-    {name: "The-Biggest-Baddest-Nastiest-Scariest-Creature-You'll-Ever-See", genuine: false},
+    {name: "The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See", genuine: false},
     {name: "Donkey", genuine: false},
     {name: "Lord", genuine: false},
     {name: "Igpay", genuine: false},
@@ -23,7 +23,7 @@ fixtures.additions = {
     {name: "Mime", genuine: false},
     {name: "Cow", genuine: false},
     {name: "Child", genuine: false},
-    {name: "Lady-of-Proper-Etiquette", genuine: false},
+    {name: "Lady of Proper Etiquette", genuine: false},
     {name: "Waiter", genuine: false},
     {name: "Dinosaur", genuine: false},
     {name: "Paratrooper", genuine: false},
@@ -67,7 +67,7 @@ fixtures.rarities = {
 // These are fixes for particular cards
 fixtures.cards = {
   "B.F.M. (Big Furry Monster)": {
-    subtypes: ["The-Biggest-Baddest-Nastiest-Scariest-Creature-You'll-Ever-See"],
+    subtypes: ["The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See"],
     rules: [
       "You must play both B.F.M. cards to put B.F.M. into play. "+
       "If either B.F.M. card leaves play, sacrifice the other.",
@@ -87,7 +87,7 @@ fixtures.cards = {
     printings: [{artist: 'spork;'}]
   },
   "Miss Demeanor": {
-    subtypes: ["Lady-of-Proper-Etiquette"]
+    subtypes: ["Lady of Proper Etiquette"]
   },
   "Little Girl": {
     cost: "{1/2W}"
