@@ -276,11 +276,11 @@ var app = {
   decodeSearch: function() {}
 };
 
-async.promise(function() {
-  app.updateCategories(this.success);
-}).then(function() {
-  app.updateCards();
-});
+// async.promise(function() {
+//   app.updateCategories(this.success);
+// }).then(function() {
+//   app.updateCards();
+// });
 
 var express = require('express');
 var less = require('connect-lesscss');
@@ -302,3 +302,41 @@ server.configure('development', function() {
 });
 
 server.listen(3000);
+
+var query = "Modern Red Creature Merfolk Lady of Proper Etiquette";
+app.getCollections(['Type', 'Subtype', 'Expansion', 'Format']).then(function(collections) {
+  var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
+
+  collections.colours = util.hash(util.keys(settings.colours), util.self);
+  collections.colours.Colorless = "Colorless";
+  collections.rarities = util.hash(util.values(settings.rarities), util.self);
+
+  var length, item;
+  var match = false;
+  var matches = [];
+  while(words.length > 0) {
+    match = false;
+
+    for (length = words.length; length > 0; length--) {
+      term = words.slice(0, length);
+      for (category in collections) {
+        for (j in collections[category]) {
+          item = collections[category][j];
+          if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == (item.name || item).toLowerCase().replace(/[^a-z0-9]/g, "")) {
+            match = {type: category, name: item.name || item};
+          }
+        }
+      }
+      if (match) break;
+    }
+    if (match) matches.push(match);
+    else {
+      matches.push({type: 'rules', term: words[0]});
+      length = 1;
+    }
+
+    words = words.slice(length);
+  }
+
+  console.log(matches);
+});
