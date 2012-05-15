@@ -3,7 +3,7 @@ module.exports = function(mongoose) {
   var schemas = {};
 
   schemas.Printing = new Schema({
-    gathererId: {type: Number, index: true},
+    gathererId: Number,
     expansion: Schema.ObjectId,
     rarity: String,
     artist: String
