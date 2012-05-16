@@ -21,10 +21,12 @@ module.exports = function(mongoose, schemas) {
   }
 
   // Method to find cards which need updating
-  models.Card.lastUpdated = function(fn) {
-    var query = this.findOne({complete: false}).asc('lastUpdated');
-    return fn ? query.run(fn) : query;
-  };
+  if (models.Card) {
+    models.Card.lastUpdated = function(fn) {
+      var query = this.findOne({complete: false}).asc('lastUpdated');
+      return fn ? query.run(fn) : query;
+    };
+  }
 
   return models;
 };
