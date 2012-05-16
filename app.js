@@ -271,11 +271,11 @@ var app = {
   }
 };
 
-async.promise(function() {
-  app.updateCategories(this.success);
-}).then(function() {
-  app.updateCards();
-});
+// async.promise(function() {
+//   app.updateCategories(this.success);
+// }).then(function() {
+//   app.updateCards();
+// });
 
 var express = require('express');
 var less = require('connect-lesscss');
@@ -299,12 +299,8 @@ server.configure('development', function() {
 server.listen(3000);
 
 var query = "Red Artifact Creature Standard";
-app.getCollections(['Type', 'Subtype', 'Expansion', 'Format']).then(function(collections) {
+app.getCollections(['Colour', 'Type', 'Subtype', 'Expansion', 'Format', 'Rarity']).then(function(collections) {
   var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
-
-  collections.colours = util.hash(util.keys(settings.colours), util.self);
-  collections.colours.Colorless = "Colorless";
-  collections.rarities = util.hash(util.values(settings.rarities), util.self);
 
   var length, item;
   var match = false;
@@ -317,8 +313,8 @@ app.getCollections(['Type', 'Subtype', 'Expansion', 'Format']).then(function(col
       for (category in collections) {
         for (j in collections[category]) {
           item = collections[category][j];
-          if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == (item.name || item).toLowerCase().replace(/[^a-z0-9]/g, "")) {
-            match = {type: category, name: item.name || item};
+          if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == item.name.toLowerCase().replace(/[^a-z0-9]/g, "")) {
+            match = {type: category, name: item};
           }
         }
       }
