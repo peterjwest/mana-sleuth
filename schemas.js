@@ -5,7 +5,7 @@ module.exports = function(mongoose) {
   schemas.Printing = new Schema({
     gathererId: Number,
     expansion: Schema.ObjectId,
-    rarity: String,
+    rarity: Schema.ObjectId,
     artist: String
   });
 
@@ -20,7 +20,7 @@ module.exports = function(mongoose) {
     toughness: {type: String, match: /^\d*|\*$/},
     cost: String,
     cmc: Number,
-    colours: [String],
+    colours: [Schema.ObjectId],
     rules: [String],
     lastUpdated: Date,
     flavourText: String,
@@ -51,6 +51,10 @@ module.exports = function(mongoose) {
     expansions: [Schema.ObjectId]
   });
 
+  schemas.Colour = new Schema({
+    name: String,
+  });
+
   schemas.Type = new Schema({
     name: String,
     genuine: {type: Boolean, default: true}
@@ -59,6 +63,10 @@ module.exports = function(mongoose) {
   schemas.Subtype = new Schema({
     name: String,
     genuine: {type: Boolean, default: true}
+  });
+
+  schemas.Rarity = new Schema({
+    name: String,
   });
 
   // Method to find gatherer id for a card
