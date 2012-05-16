@@ -12,3 +12,6 @@ Then it uses (read: will use) some clever tricks to find exactly the cards you w
  - Save block/expansion relationships
  - Store images on S3
  - Double update bug for split cards
+ - Fix fixture cards overwriting printings
+ - Merge promo/special rarities
+ - Remove land rarity, colourless colour

@@ -22,9 +22,7 @@ mongoose.connect('mongodb://localhost/mana_sleuth');
 
 // App settings
 var settings = {
-  colours: {Green: 'G', Black: 'B', Blue: 'U', Red: 'R', White: 'W'},
-  rarities: {C: 'Common', U: 'Uncommon', R: 'Rare', M: 'Mythic Rare', P: 'Promo', S: 'Special'},
-  categories: ['Type', 'Subtype', 'Expansion', 'Block', 'Format']
+  categories: ['Colour', 'Type', 'Subtype', 'Expansion', 'Block', 'Format', 'Rarity']
 };
 
 // App functionality
@@ -100,18 +98,17 @@ var app = {
         var next = this;
         models.Card.sync({name: details.name}, function(card) {
 
-          details.colours = details.colours
-            .map(function(c) { return settings.colours[c]; })
-            .filter(function(c) { return c; });
+          details.colours = details.colours.map(function(colour) {
+            return collections.colours[colour];
+          }).filter(function(colour) { return colour; });
 
-          details.printings = details.printings.map(function(p) {
-            p.expansion = expansion._id;
-            p.rarity = settings.rarities[p.rarity];
-            return p;
-
-            if (fixtures.rarities[p.rarity]) {
-              p.rarity = fixtures.rarities[p.rarity].rarity;
+          details.printings = details.printings.map(function(printing) {
+            if (fixtures.replacements.rarities[printing.rarity]) {
+              printing.rarity = fixtures.replacements.rarities[printing.rarity].rarity;
             }
+            printing.rarity = collections.rarities[printing.rarity];
+            printing.expansion = expansion._id;
+            return printing;
           });
 
           details.printings = card.printings.concat(details.printings);
@@ -196,13 +193,13 @@ var app = {
 
         // Applying type replacement fixtures
         var type = card.types.join(" ");
-        if (fixtures.replacements[type] !== null) {
-          applyReplacements(card, fixtures.replacements[type])
+        if (fixtures.replacements.types[type] !== null) {
+          applyReplacements(card, fixtures.replacements.types[type])
         }
 
         // Applying card replacement fixtures
-        if (fixtures.cards[card.name]) {
-          applyReplacements(card, fixtures.cards[card.name]);
+        if (fixtures.replacements.cards[card.name]) {
+          applyReplacements(card, fixtures.replacements.cards[card.name]);
         }
 
         card.types = card.types.map(function(type) {
@@ -271,9 +268,7 @@ var app = {
       console.log("Updated");
       if (success) success();
     });
-  },
-
-  decodeSearch: function() {}
+  }
 };
 
 async.promise(function() {
@@ -282,61 +277,61 @@ async.promise(function() {
   app.updateCards();
 });
 
-// var express = require('express');
-// var less = require('connect-lesscss');
+var express = require('express');
+var less = require('connect-lesscss');
 
-// var server = express.createServer();
-// server.get('/', function(request, response) {
-//     response.render('index', {title: "Mana Sleuth", subtitle: "Streamlined MTG card search"});
-// });
+var server = express.createServer();
+server.get('/', function(request, response) {
+    response.render('index', {title: "Mana Sleuth", subtitle: "Streamlined MTG card search"});
+});
 
-// server.configure(function() {
-//   server.set('views', __dirname + '/views');
-//   server.set('view engine', 'jade');
-//   server.use(express.static(__dirname + '/public'));
-//   server.use("/css/styles.css", less("public/less/styles.less", {paths: ["public/less"]}));
-// });
+server.configure(function() {
+  server.set('views', __dirname + '/views');
+  server.set('view engine', 'jade');
+  server.use(express.static(__dirname + '/public'));
+  server.use("/css/styles.css", less("public/less/styles.less", {paths: ["public/less"]}));
+});
 
-// server.configure('development', function() {
-//   server.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
-// });
+server.configure('development', function() {
+  server.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
+});
 
-// server.listen(3000);
+server.listen(3000);
 
-// var query = "Red Artifact Creature Standard";
-// app.getCollections(['Type', 'Subtype', 'Expansion', 'Format']).then(function(collections) {
-//   var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
+var query = "Red Artifact Creature Standard";
+app.getCollections(['Type', 'Subtype', 'Expansion', 'Format']).then(function(collections) {
+  var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
 
-//   collections.colours = util.hash(util.keys(settings.colours), util.self);
-//   collections.colours.Colorless = "Colorless";
-//   collections.rarities = util.hash(util.values(settings.rarities), util.self);
+  collections.colours = util.hash(util.keys(settings.colours), util.self);
+  collections.colours.Colorless = "Colorless";
+  collections.rarities = util.hash(util.values(settings.rarities), util.self);
 
-//   var length, item;
-//   var match = false;
-//   var matches = [];
-//   while(words.length > 0) {
-//     match = false;
+  var length, item;
+  var match = false;
+  var matches = [];
+  while(words.length > 0) {
+    match = false;
 
-//     for (length = words.length; length > 0; length--) {
-//       term = words.slice(0, length);
-//       for (category in collections) {
-//         for (j in collections[category]) {
-//           item = collections[category][j];
-//           if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == (item.name || item).toLowerCase().replace(/[^a-z0-9]/g, "")) {
-//             match = {type: category, name: item.name || item};
-//           }
-//         }
-//       }
-//       if (match) break;
-//     }
-//     if (match) matches.push(match);
-//     else {
-//       matches.push({type: 'rules', term: words[0]});
-//       length = 1;
-//     }
+    for (length = words.length; length > 0; length--) {
+      term = words.slice(0, length);
+      for (category in collections) {
+        for (j in collections[category]) {
+          item = collections[category][j];
+          if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == (item.name || item).toLowerCase().replace(/[^a-z0-9]/g, "")) {
+            match = {type: category, name: item.name || item};
+          }
+        }
+      }
+      if (match) break;
+    }
+    if (match) matches.push(match);
+    else {
+      matches.push({type: 'rules', term: words[0]});
+      length = 1;
+    }
 
-//     words = words.slice(length);
-//   }
+    words = words.slice(length);
+  }
 
-//   console.log(matches);
-// });
+  console.log(matches);
+});

@@ -57,11 +57,11 @@ module.exports = function(request, cheerio, util) {
 
         // Map rarity letters to words
         var rarities = {
-          L: 'Land', 
-          C: 'Common', 
-          U: 'Uncommon', 
-          R: 'Rare', 
-          M: 'Mythic Rare', 
+          L: 'Land',
+          C: 'Common',
+          U: 'Uncommon',
+          R: 'Rare',
+          M: 'Mythic Rare',
           P: 'Promo',
           S: 'Special'
         };

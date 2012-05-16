@@ -1,3 +1,4 @@
+// This file corrects incorrect or incomplete content from the gatherer database
 var fixtures = exports;
 
 // These are additions for categories (e.g. type, subtype) not included in the gatherer database
@@ -46,50 +47,59 @@ fixtures.removals = {
     {name: "Lorwyn"},
     {name: "Mirrodin"},
     {name: "Zendikar"},
+  ],
+  Colour: [
+    {name: "Colorless"}
+  ],
+  Rarity: [
+    {name: "Promo"}
   ]
 };
 
-// These replace outdated types with their modern equivalent
 fixtures.replacements = {
-  'Interrupt': {types: ['Instant']},
-  'Summon Legend': {types: ['Legendary', 'Creature']},
-  'Summon': {types: ['Creature']},
-  'Enchant Creature': {types: ['Enchantment'], subtypes: ['Aura']},
-  'Enchant Player': {types: ['Enchantment'], subtypes: ['Aura']},
-  '(none)': {types: ['Token']}
-};
+  // These replace outdated types with their modern equivalent
+  types: {
+    'Interrupt': {types: ['Instant']},
+    'Summon Legend': {types: ['Legendary', 'Creature']},
+    'Summon': {types: ['Creature']},
+    'Enchant Creature': {types: ['Enchantment'], subtypes: ['Aura']},
+    'Enchant Player': {types: ['Enchantment'], subtypes: ['Aura']},
+    '(none)': {types: ['Token']}
+  },
 
-// Removes the erratically used 'Land' rarity
-fixtures.rarities = {
-  'Land': {rarity: 'Common'}
-};
+  // Removes the erratically used 'Land' rarity, and the once used 'Promo' rarity
+  rarities: {
+    'Land': {rarity: 'Common'},
+    'Promo': {rarity: 'Special'}
+  },
 
-// These are fixes for particular cards
-fixtures.cards = {
-  "B.F.M. (Big Furry Monster)": {
-    subtypes: ["The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See"],
-    rules: [
-      "You must play both B.F.M. cards to put B.F.M. into play. "+
-      "If either B.F.M. card leaves play, sacrifice the other.",
-      "B.F.M. can be blocked only by three or more creatures."
-    ],
-    flavourText:
-      "\"It was big. Really, really big. No, bigger than that. Even bigger. "+
-      "Keep going. More. No, more. Look, we're talking krakens and dreadnoughts for jewelry. "+
-      "It was big\"\n-Arna Kennerd, skyknight",
-    multipart: {type: 'double'},
-    printings: [
-      {gathererId: 9780},
-      {gathererId: 9844},
-    ]
-  },
-  "Look at Me, I'm R&D": {
-    printings: [{artist: 'spork;'}]
-  },
-  "Miss Demeanor": {
-    subtypes: ["Lady of Proper Etiquette"]
-  },
-  "Little Girl": {
-    cost: "{1/2W}"
+  // Fixes for cards in the unglued/unhinged set
+  cards: {
+    "B.F.M. (Big Furry Monster)": {
+      subtypes: ["The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See"],
+      rules: [
+        "You must play both B.F.M. cards to put B.F.M. into play. "+
+        "If either B.F.M. card leaves play, sacrifice the other.",
+        "B.F.M. can be blocked only by three or more creatures."
+      ],
+      flavourText:
+        "\"It was big. Really, really big. No, bigger than that. Even bigger. "+
+        "Keep going. More. No, more. Look, we're talking krakens and dreadnoughts for jewelry. "+
+        "It was big\"\n-Arna Kennerd, skyknight",
+      multipart: {type: 'double'},
+      printings: [
+        {gathererId: 9780},
+        {gathererId: 9844},
+      ]
+    },
+    "Look at Me, I'm R&D": {
+      printings: [{artist: 'spork;'}]
+    },
+    "Miss Demeanor": {
+      subtypes: ["Lady of Proper Etiquette"]
+    },
+    "Little Girl": {
+      cost: "{1/2W}"
+    }
   }
 };
