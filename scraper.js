@@ -31,6 +31,7 @@ module.exports = function(request, cheerio, util) {
       };
 
       success({
+        Colour: find(/color/i),
         Expansion: find(/set|expansion/i),
         Format: find(/format/i),
         Block: find(/block/i),
@@ -54,10 +55,21 @@ module.exports = function(request, cheerio, util) {
         card.name = name;
         card.colours = $card.find(".color").text().split("/");
 
+        // Map rarity letters to words
+        var rarities = {
+          L: 'Land', 
+          C: 'Common', 
+          U: 'Uncommon', 
+          R: 'Rare', 
+          M: 'Mythic Rare', 
+          P: 'Promo',
+          S: 'Special'
+        };
+
         card.printings.push({
           gathererId: $card.find(".nameLink").attr("href").match(/multiverseid=(\d+)/i)[1],
           artist: $card.find(".artist").text(),
-          rarity: $card.find(".rarity").text()
+          rarity: rarities[$card.find(".rarity").text()]
         });
       });
       success(util.values(cards));
