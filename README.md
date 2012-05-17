@@ -13,5 +13,4 @@ Then it uses (read: will use) some clever tricks to find exactly the cards you w
  - Store images on S3
  - Double update bug for split cards
  - Fix fixture cards overwriting printings
- - Merge promo/special rarities
- - Remove land rarity, colourless colour
+ - Fix flavour text missing newlines
