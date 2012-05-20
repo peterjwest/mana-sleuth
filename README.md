@@ -14,3 +14,6 @@ Then it uses (read: will use) some clever tricks to find exactly the cards you w
  - Double update bug for split cards
  - Fix fixture cards overwriting printings
  - Fix flavour text missing newlines
+ - Mark un-set cards and remove from search
+ - Paging
+ - History JS and live loading
