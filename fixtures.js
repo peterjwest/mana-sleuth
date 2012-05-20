@@ -52,7 +52,8 @@ fixtures.removals = {
     {name: "Colorless"}
   ],
   Rarity: [
-    {name: "Promo"}
+    {name: "Promo"},
+    {name: "Land"}
   ]
 };
 
