@@ -268,11 +268,74 @@ var app = {
       console.log("Updated");
       if (success) success();
     });
+  },
+
+  searchCards: function(query) {
+    return async.promise(function() {
+      var findCards = this;
+      var categories = ['Colour', 'Type', 'Subtype', 'Expansion', 'Format', 'Rarity'];
+
+      app.getCollections(categories).then(function(collections) {
+        var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
+        var length, item;
+        var match = false;
+        var matches = [];
+
+        while(words.length > 0) {
+          match = false;
+
+          for (length = words.length; length > 0; length--) {
+            term = words.slice(0, length);
+            for (category in collections) {
+              for (j in collections[category]) {
+                item = collections[category][j];
+                if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == item.name.toLowerCase().replace(/[^a-z0-9]/g, "")) {
+                  match = {type: category, obj: item};
+                }
+              }
+            }
+            if (match) break;
+          }
+          if (match) matches.push(match);
+          else {
+            matches.push({type: 'rules', term: words[0]});
+            length = 1;
+          }
+
+          words = words.slice(length);
+        }
+
+        var mongoAttrs = {
+          colours: 'colours',
+          types: 'types',
+          subtypes: 'subtypes',
+          formats: 'legalities.format',
+          expansions: 'printings.expansion',
+          rarities: 'printings.rarity'
+        };
+        var criteria =  [];
+        matches.map(function(match) {
+          if (match.type == "rules") {
+            var match = new RegExp("\\b"+util.regEscape(match.term)+"\\b", "i");
+            criteria.push({$or: [{rules: match}, {name: match}]});
+          }
+          else {
+            var obj = {};
+            obj[mongoAttrs[match.type]] = match.obj._id;
+            criteria.push(obj);
+          }
+        });
+
+        models.Card.find({'$and': criteria}).limit(20).run(function(err, cards) {
+          findCards.success(cards);
+        });
+      });
+    });
   }
 };
 
 // async.promise(function() {
-//   app.updateCategories(this.success);
+//  app.updateCategories(this.success);
 // }).then(function() {
 //   app.updateCards();
 // });
@@ -281,14 +344,12 @@ var express = require('express');
 var less = require('connect-lesscss');
 
 var server = express.createServer();
-server.get('/', function(request, response) {
-    response.render('index', {title: "Mana Sleuth", subtitle: "Streamlined MTG card search"});
-});
 
 server.configure(function() {
   server.set('views', __dirname + '/views');
   server.set('view engine', 'jade');
   server.use(express.static(__dirname + '/public'));
+  server.use(express.bodyParser());
   server.use("/css/styles.css", less("public/less/styles.less", {paths: ["public/less"]}));
 });
 
@@ -298,36 +359,20 @@ server.configure('development', function() {
 
 server.listen(3000);
 
-var query = "Red Artifact Creature Standard";
-app.getCollections(['Colour', 'Type', 'Subtype', 'Expansion', 'Format', 'Rarity']).then(function(collections) {
-  var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
+server.get('/', function(request, response) {
+  response.render('index', {
+    title: "Mana Sleuth",
+    subtitle: "Streamlined MTG card search",
+    cards: []
+  });
+});
 
-  var length, item;
-  var match = false;
-  var matches = [];
-  while(words.length > 0) {
-    match = false;
-
-    for (length = words.length; length > 0; length--) {
-      term = words.slice(0, length);
-      for (category in collections) {
-        for (j in collections[category]) {
-          item = collections[category][j];
-          if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == item.name.toLowerCase().replace(/[^a-z0-9]/g, "")) {
-            match = {type: category, name: item};
-          }
-        }
-      }
-      if (match) break;
-    }
-    if (match) matches.push(match);
-    else {
-      matches.push({type: 'rules', term: words[0]});
-      length = 1;
-    }
-
-    words = words.slice(length);
-  }
-
-  console.log(matches);
+server.post('/', function(request, response) {
+  app.searchCards(request.param("query")).then(function(cards) {
+    response.render('index', {
+      title: "Mana Sleuth",
+      subtitle: "Streamlined MTG card search",
+      cards: cards
+    });
+  });
 });
