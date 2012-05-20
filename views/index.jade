@@ -1,3 +1,9 @@
-form.well.form-inline
-    input.span6(type='text', placeholder='Type anything')
+form.well.form-inline(method='post')
+    input.span6(name="query", type='text', placeholder='Type anything')
     // lov3s uz fedz mez yeah-yeah! Pete-rabbit is awesomes when he is.
+
+h3= cards.length+" results"
+ul
+  each card in cards
+    li
+      a(href='http://gatherer.wizards.com/Pages/Card/Details.aspx?multiverseid='+card.printings[0].gathererId)= card.name
