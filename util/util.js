@@ -53,3 +53,6 @@ util.key = function(key) { return function(obj) { return obj[key] }; };
 
 // Returning the given object useful for combining with things
 util.self = function(item) { return item; };
+
+// Escapes a string for regex
+util.regEscape = function(str) { return str.replace(/([.?*+^$[\]\\(){}|-])/g, "\\$1"); };
