@@ -335,7 +335,7 @@ var app = {
         });
 
         models.Card.find({'$and': criteria}).limit(20).run(function(err, cards) {
-          findCards.success(cards);
+          findCards.success(cards, collections);
         });
       });
     });
@@ -372,17 +372,22 @@ server.get('/', function(request, response) {
     title: "Mana Sleuth",
     subtitle: "Streamlined MTG card search",
     cards: false,
-    router: router
+    collections: false,
+    router: router,
+    util: util
   });
 });
 
 server.post('/', function(request, response) {
-  app.searchCards(request.param("query")).then(function(cards) {
+  app.searchCards(request.param("query")).then(function(cards, collections) {
+    console.log(collections);
     response.render('index', {
       title: "Mana Sleuth",
       subtitle: "Streamlined MTG card search",
       cards: cards,
-      router: router
+      collections: collections,
+      router: router,
+      util: util
     });
   });
 });

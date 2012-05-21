@@ -24,17 +24,27 @@
 
 .container {
   margin-bottom: 20px;
+  min-width: 180px;
 }
 
 .card {
+  .clearfix;
   margin-bottom: 10px;
 
   .image {
-    width: 223px; height: 310px;
-    background: url(../images/card_back.png);
+    float: left;
+    height: 310px; min-width: 222px;
+    margin-right: 15px; margin-bottom: 10px;
+    background: url(../images/card_back.png) no-repeat;
   }
 }
 
+/* Adjusts image sizing for very small windows */
 @media (max-width: 265px) {
-  .card .image { width: auto; height: auto; }
+  .card .image { height: auto; min-width: 0; background: none; }
+}
+
+/* Moves text below image for small windows (e.g. iphone vertical) */
+@media (max-width: 460px) {
+  .card .name { clear: left; }
 }
