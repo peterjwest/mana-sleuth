@@ -68,7 +68,7 @@ var app = {
         // Save categories
         async.map(data, function(details) {
           var next = this;
-          model.sync({name: details.name}, function(item) {
+          model.sync({name: details.name}, function(err, item) {
             collections[model.collectionName][item.name] = item;
             item.set(details);
             item.save(next.success);
@@ -96,7 +96,7 @@ var app = {
     scraper.getExpansionCards(router.cards(expansion.name), function(cards) {
       async.map(cards, function(details) {
         var next = this;
-        models.Card.sync({name: details.name}, function(card) {
+        models.Card.sync({name: details.name}, function(err, card) {
 
           details.colours = details.colours.map(function(colour) {
             return collections.colours[colour];
@@ -380,7 +380,6 @@ server.get('/', function(request, response) {
 
 server.post('/', function(request, response) {
   app.searchCards(request.param("query")).then(function(cards, collections) {
-    console.log(collections);
     response.render('index', {
       title: "Mana Sleuth",
       subtitle: "Streamlined MTG card search",
