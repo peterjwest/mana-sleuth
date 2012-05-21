@@ -21,3 +21,20 @@
 @headerColor: #159bbe;
 @headerColorDark: #1085a6;
 @inactiveBubble: #f0f0f0;
+
+.container {
+  margin-bottom: 20px;
+}
+
+.card {
+  margin-bottom: 10px;
+
+  .image {
+    width: 223px; height: 310px;
+    background: url(../images/card_back.png);
+  }
+}
+
+@media (max-width: 265px) {
+  .card .image { width: auto; height: auto; }
+}
