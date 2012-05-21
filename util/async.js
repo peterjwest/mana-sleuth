@@ -19,10 +19,10 @@ async.promise = function(fn) {
     promise.next = {
       success: function() {
         promise.succeeded = true;
-        promise.result = arguments[0];
+        promise.result = arguments;
         if (promise.success) promise.success();
       },
-      fail: function() { promise.failed = arguments[0]; },
+      fail: function() { promise.failed = arguments; },
       async: function() { return promise.next; }
     };
 
@@ -30,7 +30,7 @@ async.promise = function(fn) {
     promise.then = function(success, fail) {
       var newPromise = create();
       promise.success = function() {
-        success.call(newPromise.next, promise.result);
+        success.apply(newPromise.next, promise.result);
       };
       if (promise.succeeded) promise.success();
       return newPromise;
