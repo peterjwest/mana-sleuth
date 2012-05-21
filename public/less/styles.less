@@ -27,6 +27,27 @@
   min-width: 180px;
 }
 
+form.search {
+  .clearfix;
+  position: relative;
+  padding-bottom: 16px;
+
+  .inputs {
+    height: 28px;
+  }
+
+  input.query {
+    position: absolute; 
+    left: 19px; right: 86px; 
+    width: auto;
+  }
+
+  input.submit {
+    position: absolute; 
+    right: 19px; 
+  }
+}
+
 .card {
   .clearfix;
   margin-bottom: 10px;
@@ -41,10 +62,29 @@
 
 /* Adjusts image sizing for very small windows */
 @media (max-width: 265px) {
-  .card .image { height: auto; min-width: 0; background: none; }
+  .card .image { 
+    height: auto; min-width: 0; 
+    background: none;
+  }
+}
+
+/* Resizes images for smaller columns */
+@media (min-width: 767px) and (max-width: 980px) { 
+  .card .image { 
+    height: 200px; min-width: 144px;
+    background: none;
+  }
+}
+
+/* Right aligns search button */
+@media (max-width: 767px) { 
+  form.search input.submit {
+    float: right;
+  }
 }
 
 /* Moves text below image for small windows (e.g. iphone vertical) */
 @media (max-width: 460px) {
   .card .name { clear: left; }
 }
+

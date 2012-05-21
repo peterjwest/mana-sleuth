@@ -1,7 +1,7 @@
-// lov3s uz fedz mez yeah-yeah! Pete-rabbit is awesomes when he is.
-
-form.well.form-inline(method='post')
-    input.span6(name="query", type='text', placeholder='Type anything')
+form.search.well.form-inline(method='post')
+  .inputs
+    input.query(name="query", type='text', placeholder='Type anything')
+    input.submit.btn.btn-primary(type='submit', value='Search')
 
 if cards
   h3= cards.length+" results"
