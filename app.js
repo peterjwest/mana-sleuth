@@ -169,7 +169,11 @@ var app = {
       if (card) {
         console.log("Updating "+card.name);
         cards.push(card);
-        scraper.getCardDetails(router.card(card.gathererId()), this.success);
+        var urls = {
+          details: router.card(card.gathererId()),
+          printings: router.printings(card.gathererId())
+        };
+        scraper.getCardDetails(urls, this.success);
       }
       else console.log("Finished");
     })
@@ -235,7 +239,11 @@ var app = {
 
           var altCard = cards[0].name == details.cards[0].name ? cards[1] : cards[0];
           if (details.multipart.type == "split") {
-            scraper.getCardDetails(router.card(altCard.gathererId(), altCard.name), function(data) {
+            var urls = {
+              details: router.card(card.gathererId(), altCard.name),
+              printings: router.printings(card.gathererId())
+            };
+            scraper.getCardDetails(urls, function(data) {
               details.cards = details.cards.concat(data.cards);
               next.success();
             });
@@ -363,7 +371,8 @@ server.get('/', function(request, response) {
   response.render('index', {
     title: "Mana Sleuth",
     subtitle: "Streamlined MTG card search",
-    cards: []
+    cards: false,
+    router: router
   });
 });
 
@@ -372,7 +381,8 @@ server.post('/', function(request, response) {
     response.render('index', {
       title: "Mana Sleuth",
       subtitle: "Streamlined MTG card search",
-      cards: cards
+      cards: cards,
+      router: router
     });
   });
 });

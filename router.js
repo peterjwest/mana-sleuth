@@ -16,13 +16,15 @@ router.cards = function(expansion) {
 };
 
 router.card = function(id, part) {
-  var urls = {};
-  ['details', 'printings'].map(function(type) {
-    //var imageType = (type == 'image' ? '&type=card' : '');
-    var queryString = 'multiverseid=' + id + (part ? '&part='+part : '');
-    urls[type] = router.domain + router.paths[type] + queryString;
-  });
-  return urls;
+  return router.domain + router.paths['details'] + 'multiverseid=' + id + (part ? '&part='+part : '');
+};
+
+router.printings = function(id) {
+  return router.domain + router.paths['printings'] + 'multiverseid=' + id;
+};
+
+router.image = function(id, part) {
+  return router.domain + router.paths['image'] + 'type=card&multiverseid=' + id + (part ? '&part='+part : '');
 };
 
 router.categories = function() {
