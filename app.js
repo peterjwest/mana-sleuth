@@ -30,12 +30,39 @@ var app = {
 
   // Get card category collections from the database
   getCollections: function(categories) {
+    var start = Date.now();
+
     var collections = {};
+    // return async.promise(function() {
+    //   var next = this;
+    //   models.Cache.findOne({name: 'collections'}, function(err, cache) {
+    //     categories.map(function(category) {
+    //       var model = models[category];
+    //       var data = cache.value[model.collectionName];
+    //       collections[model.collectionName] = util.hash(data, function(item) { return item.name; });
+    //     });
+    //     next.success();
+    //   });
+    // }).then(function() { console.log("query: "+(Date.now() - start)); this.success(collections); });
+
     return async.map(categories, function(category) {
       var next = this;
       var model = models[category];
       model.find(function(err, data) {
         collections[model.collectionName] = util.hash(data, function(item) { return item.name; });
+        next.success();
+      });
+    }).then(function() { console.log("query: "+(Date.now() - start)); this.success(collections); });
+  },
+
+  // Get card category collections from the database
+  getCollectionArrays: function(categories) {
+    var collections = [];
+    return async.map(categories, function(category) {
+      var next = this;
+      var model = models[category];
+      model.find(function(err, data) {
+        collections[model.collectionName] = data;//.map(function(item) { return {name: item.name}; });
         next.success();
       });
     }).then(function() { this.success(collections); });
@@ -390,3 +417,21 @@ server.post('/', function(request, response) {
     });
   });
 });
+
+// var start = Date.now();
+
+// app.getCollectionArrays(settings.categories)
+// .then(function(collections) {
+//   console.log("query: "+(Date.now() - start));
+//   // models.Cache.sync({name: 'collections'}, function(err, cache) {
+//   //   console.log(cache.value);
+//   //   cache.set({name: "collections", value: util.clone(collections)});
+//   //   cache.save(function(err) {
+//   //     console.log(err);
+//   //   });
+//   // });
+// });
+
+// models.Cache.find({name: 'collections'}, function(err, cache) {
+//   console.log("cache: "+(Date.now() - start));
+// });

@@ -39,6 +39,14 @@ util.pluck = function(array, key) {
   return values;
 };
 
+
+// Creates a shallow clone of an object
+util.clone = function(obj) {
+  var next = {};
+  for (i in obj) next[i] = obj[i];
+  return next;
+};
+
 // Gets a random number between a min and max
 util.between = function(min, max) { return Math.random()*(max - min) + min };
 

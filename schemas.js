@@ -69,6 +69,11 @@ module.exports = function(mongoose) {
     name: String,
   });
 
+  schemas.Cache = new Schema({
+    name: String,
+    value: {}
+  })
+
   // Method to find gatherer id for a card
   schemas.Card.methods.gathererId = function() {
     var printing = this.printings[0];
