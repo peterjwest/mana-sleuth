@@ -18,9 +18,9 @@ async.promise = function(fn) {
     var promise = {};
     promise.next = {
       success: function() {
-        promise.succeeded = true;
+        promise.resolved = true;
         promise.result = arguments;
-        if (promise.success) promise.success();
+        if (promise.propagate) promise.propagate();
       },
       fail: function() { promise.failed = arguments; },
       async: function() { return promise.next; }
@@ -28,24 +28,39 @@ async.promise = function(fn) {
 
     // Adds then method to the promise
     promise.then = function(success, fail) {
-      var newPromise = create();
-      promise.success = function() {
-        success.apply(newPromise.next, promise.result);
+      var nextPromise = create();
+      promise.propagate = function() {
+        var response = success.apply(nextPromise.next, promise.result);
+        if (response && response.then) {
+          if (!nextPromise.propagate) {
+            nextPromise.then = response.then;
+          }
+          if (response.resolved && nextPromise.propagate) {
+            nextPromise.result = response.result;
+            nextPromise.propagate();
+          }
+          if (!response.resolved && nextPromise.propagate) {
+            response.then(function() {
+              nextPromise.result = arguments;
+              nextPromise.propagate();
+            });
+          }
+        }
       };
-      if (promise.succeeded) promise.success();
-      return newPromise;
+      if (promise.resolved) promise.propagate();
+      return nextPromise;
     };
 
     // Adds map method to the promise
     promise.map = function(success, fail) {
-      var newPromise = create();
-      promise.success = function() {
-        async.map(promise.result, success).then(function(result) {
-          newPromise.next.success(result);
+      var nextPromise = create();
+      promise.propagate = function() {
+        async.map(promise.result[0], success).then(function(result) {
+          nextPromise.next.success(result);
         });
       };
-      if (promise.succeeded) promise.success();
-      return newPromise;
+      if (promise.resolved) promise.propagate();
+      return nextPromise;
     };
     return promise;
   };
