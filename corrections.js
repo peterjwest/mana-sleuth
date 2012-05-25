@@ -1,8 +1,8 @@
 // This file corrects incorrect or incomplete content from the gatherer database
-var fixtures = exports;
+var corrections = exports;
 
 // These are additions for categories (e.g. type, subtype) not included in the gatherer database
-fixtures.additions = {
+corrections.additions = {
   Type: [
     {name: "Token", genuine: true},
     {name: "Eaturecray", genuine: false}
@@ -35,7 +35,7 @@ fixtures.additions = {
 };
 
 // These are removals for invald categories in the gatherer database
-fixtures.removals = {
+corrections.removals = {
   Type: [
     {name: "Plane"},
     {name: "Ongoing"},
@@ -57,7 +57,7 @@ fixtures.removals = {
   ]
 };
 
-fixtures.replacements = {
+corrections.replacements = {
   // These replace outdated types with their modern equivalent
   types: {
     'Interrupt': {types: ['Instant']},
