@@ -10,6 +10,6 @@ if cards
       article.card.span6
         img(src=router.image(card.gathererId())).image
         h3.name: a(href=router.card(card.gathererId()))= card.name
-        h4= categories.key.types[card.types[0]].name
+        h4= categories.id.types[card.types[0]].name
         each rule in card.rules
           p.rule= rule

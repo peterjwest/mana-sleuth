@@ -37,20 +37,25 @@ form.search {
   }
 
   input.query {
-    position: absolute; 
-    left: 19px; right: 86px; 
+    position: absolute;
+    left: 19px; right: 86px;
     width: auto;
   }
 
   input.submit {
-    position: absolute; 
-    right: 19px; 
+    position: absolute;
+    right: 19px;
   }
 }
 
 .card {
   .clearfix;
   margin-bottom: 10px;
+
+  .name {
+    line-height: 22px;
+    margin-bottom: 3px;
+  }
 
   .image {
     float: left;
@@ -62,22 +67,26 @@ form.search {
 
 /* Adjusts image sizing for very small windows */
 @media (max-width: 265px) {
-  .card .image { 
-    height: auto; min-width: 0; 
+  .card .image {
+    height: auto; min-width: 0;
     background: none;
   }
 }
 
 /* Resizes images for smaller columns */
-@media (min-width: 767px) and (max-width: 980px) { 
-  .card .image { 
-    height: 200px; min-width: 144px;
+@media (min-width: 767px) and (max-width: 980px) {
+  .card .image {
+    height: 240px; min-width: 144px;
     background: none;
+  }
+  p {
+    font-size: 11px;
+    line-height: 15px;
   }
 }
 
 /* Right aligns search button */
-@media (max-width: 767px) { 
+@media (max-width: 767px) {
   form.search input.submit {
     float: right;
   }

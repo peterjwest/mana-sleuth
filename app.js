@@ -55,7 +55,6 @@ server.get('/', function(request, response) {
 
 server.post('/', function(request, response) {
   app.cards.search(request.param("query")).then(function(cards) {
-    for (i in app.categories.key.colours) console.log(i);
     response.render('index', {
       title: "Mana Sleuth",
       subtitle: "Streamlined MTG card search",

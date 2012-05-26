@@ -1,5 +1,5 @@
 module.exports = function(app, async, util) {
-  var categories = {data: {}, key: {}};
+  var categories = {data: {}, name: {}, id: {}};
   categories.types = ['Colour', 'Type', 'Subtype', 'Expansion', 'Block', 'Format', 'Rarity'];
 
   // Get card category collections from the database cache
@@ -11,7 +11,7 @@ module.exports = function(app, async, util) {
           var model = app.models[category];
           categories.data[model.collectionName] = cache.value[model.collectionName];
         });
-        categories.hash(["name", "_id"]);
+        categories.hash();
         next.success();
       });
     });
@@ -31,13 +31,12 @@ module.exports = function(app, async, util) {
 
   // Puts all categories into hashes keyed by the given key
   categories.hash = function(keys) {
-    keys.map(function(key) {
-      var hash = {};
+    var keys = {name: "name", _id: "id"};
+    for (key in keys) {
       for (category in categories.data) {
-        var keyed = util.hash(categories.data[category], function(item) { return item[key]; });
-        categories.key[category] = util.merge(categories.key[category], keyed);
+        categories[keys[key]][category] = util.hash(categories.data[category], util.key(key));
       }
-    });
+    }
   };
 
   // Updates the categories from the scraper
@@ -73,7 +72,7 @@ module.exports = function(app, async, util) {
 
     // Hash and cache the categories
     .then(function() {
-      categories.hash(["name", "_id"]);
+      categories.hash();
       categories.cache().then(this.success);
     })
 

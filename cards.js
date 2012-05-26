@@ -69,15 +69,15 @@ module.exports = function(app, async, util) {
         }
 
         card.types = card.types.map(function(type) {
-          return app.categories.types[type];
+          return app.categories.name.types[type];
         }).filter(function(type) { return type; });
 
         card.subtypes = card.subtypes.map(function(subtype) {
-          return app.categories.subtypes[subtype];
+          return app.categories.name.subtypes[subtype];
         }).filter(function(subtype) { return subtype; });
 
         card.legalities.map(function(legality) {
-          legality.format = app.categories.formats[legality.format];
+          legality.format = app.categories.name.formats[legality.format];
         });
       });
 
@@ -141,68 +141,65 @@ module.exports = function(app, async, util) {
   };
 
   cards.search = function(query) {
-    return async.promise(function() {
-      var findCards = this;
-      var categories = ['Colour', 'Type', 'Subtype', 'Expansion', 'Format', 'Rarity'];
+    // Get required categories from the database
+    return app.categories.get()
 
-      // Get required categories from the database
-      app.categories.get(categories)
+    // Perform the search
+    .then(function() {
+      var next = this;
+      var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
+      var length, item, term;
+      var match = false;
+      var matches = [];
 
-      // Perform the search
-      .then(function() {
-        var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
-        var length, item, term;
-        var match = false;
-        var matches = [];
+      while(words.length > 0) {
+        match = false;
 
-        while(words.length > 0) {
-          match = false;
-
-          for (length = words.length; length > 0; length--) {
-            term = words.slice(0, length);
-            for (category in app.categories.key) {
-              for (j in app.categories.key[category]) {
-                item = app.categories.key[category][j];
-                if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == item.name.toLowerCase().replace(/[^a-z0-9]/g, "")) {
-                  match = {type: category, obj: item};
-                }
+        for (length = words.length; length > 0; length--) {
+          term = words.slice(0, length);
+          for (category in app.categories.id) {
+            for (j in app.categories.id[category]) {
+              item = app.categories.id[category][j];
+              if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == item.name.toLowerCase().replace(/[^a-z0-9]/g, "")) {
+                match = {type: category, obj: item};
               }
             }
-            if (match) break;
           }
-          if (match) matches.push(match);
-          else {
-            matches.push({type: 'rules', term: words[0]});
-            length = 1;
-          }
-
-          words = words.slice(length);
+          if (match) break;
+        }
+        if (match) matches.push(match);
+        else {
+          matches.push({type: 'rules', term: words[0]});
+          length = 1;
         }
 
-        var mongoAttrs = {
-          colours: 'colours',
-          types: 'types',
-          subtypes: 'subtypes',
-          formats: 'legalities.format',
-          expansions: 'printings.expansion',
-          rarities: 'printings.rarity'
-        };
-        var criteria =  [];
-        matches.map(function(match) {
-          if (match.type == "rules") {
-            var match = new RegExp("\\b"+util.regEscape(match.term)+"\\b", "i");
-            criteria.push({$or: [{rules: match}, {name: match}]});
-          }
-          else {
-            var obj = {};
-            obj[mongoAttrs[match.type]] = match.obj._id;
-            criteria.push(obj);
-          }
-        });
+        words = words.slice(length);
+      }
 
-        app.models.Card.find({'$and': criteria}).limit(20).run(function(err, cards) {
-          findCards.success(cards);
-        });
+      var mongoAttrs = {
+        colours: 'colours',
+        types: 'types',
+        subtypes: 'subtypes',
+        formats: 'legalities.format',
+        expansions: 'printings.expansion',
+        rarities: 'printings.rarity'
+      };
+
+      var criteria =  [];
+      matches.map(function(match) {
+        if (match.type == "rules") {
+          var match = new RegExp("\\b"+util.regEscape(match.term)+"\\b", "i");
+          criteria.push({$or: [{rules: match}, {name: match}]});
+        }
+        else {
+          var obj = {};
+          obj[mongoAttrs[match.type]] = match.obj._id;
+          criteria.push(obj);
+        }
+      });
+
+      app.models.Card.find({'$and': criteria}).limit(20).run(function(err, cards) {
+        next.success(cards);
       });
     });
   };
