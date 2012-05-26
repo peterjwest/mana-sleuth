@@ -1,5 +1,5 @@
 module.exports = function(app, async, util) {
-  var categories = {data: {}, by: {}};
+  var categories = {data: {}, key: {}};
   categories.types = ['Colour', 'Type', 'Subtype', 'Expansion', 'Block', 'Format', 'Rarity'];
 
   // Get card category collections from the database cache
@@ -34,8 +34,8 @@ module.exports = function(app, async, util) {
     keys.map(function(key) {
       var hash = {};
       for (category in categories.data) {
-        //console.log(categories.data[category]);
-        categories.by[category] = util.hash(categories.data[category], function(item) { return item[key]; });
+        var keyed = util.hash(categories.data[category], function(item) { return item[key]; });
+        categories.key[category] = util.merge(categories.key[category], keyed);
       }
     });
   };

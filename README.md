@@ -17,3 +17,4 @@ Then it uses (read: will use) some clever tricks to find exactly the cards you w
  - Mark un-set cards and remove from search
  - Paging
  - History JS and live loading
+ - Sort out keyed categories!!

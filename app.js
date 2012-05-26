@@ -48,26 +48,27 @@ server.get('/', function(request, response) {
     subtitle: "Streamlined MTG card search",
     cards: false,
     categories: false,
-    router: router,
+    router: app.router,
     util: util
   });
 });
 
 server.post('/', function(request, response) {
-  app.searchCards(request.param("query")).then(function(cards) {
+  app.cards.search(request.param("query")).then(function(cards) {
+    for (i in app.categories.key.colours) console.log(i);
     response.render('index', {
       title: "Mana Sleuth",
       subtitle: "Streamlined MTG card search",
       cards: cards,
       categories: app.categories,
-      router: router,
+      router: app.router,
       util: util
     });
   });
 });
 
-// server.listen(3000);
+server.listen(3000);
 
-app.categories.update()
-  .then(app.expansions.populate)
-  .then(app.cards.update);
+// app.categories.update()
+//   .then(app.expansions.populate)
+//   .then(app.cards.update);

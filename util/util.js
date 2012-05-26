@@ -39,12 +39,18 @@ util.pluck = function(array, key) {
   return values;
 };
 
-
 // Creates a shallow clone of an object
 util.clone = function(obj) {
   var next = {};
   for (i in obj) next[i] = obj[i];
   return next;
+};
+
+// Merges two objects, creating a default if neccessary
+util.merge = function(a, b) {
+  a = a || {};
+  for (i in b) a[i] = b[i];
+  return a;
 };
 
 // Gets a random number between a min and max

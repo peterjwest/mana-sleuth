@@ -151,7 +151,7 @@ module.exports = function(app, async, util) {
       // Perform the search
       .then(function() {
         var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
-        var length, item;
+        var length, item, term;
         var match = false;
         var matches = [];
 
@@ -160,9 +160,9 @@ module.exports = function(app, async, util) {
 
           for (length = words.length; length > 0; length--) {
             term = words.slice(0, length);
-            for (category in app.categories) {
-              for (j in app.categories[category]) {
-                item = app.categories[category][j];
+            for (category in app.categories.key) {
+              for (j in app.categories.key[category]) {
+                item = app.categories.key[category][j];
                 if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == item.name.toLowerCase().replace(/[^a-z0-9]/g, "")) {
                   match = {type: category, obj: item};
                 }
