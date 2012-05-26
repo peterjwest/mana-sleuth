@@ -1,4 +1,4 @@
-module.exports = function(scraper, corrections) {
+module.exports = function(app, async, util) {
   var categories = {data: {}, by: {}};
   categories.types = ['Colour', 'Type', 'Subtype', 'Expansion', 'Block', 'Format', 'Rarity'];
 
@@ -6,9 +6,9 @@ module.exports = function(scraper, corrections) {
   categories.get = function() {
     return async.promise(function() {
       var next = this;
-      models.Cache.findOne({name: 'categories'}, function(err, cache) {
+      app.models.Cache.findOne({name: 'categories'}, function(err, cache) {
         categories.types.map(function(category) {
-          var model = models[category];
+          var model = app.models[category];
           categories.data[model.collectionName] = cache.value[model.collectionName];
         });
         categories.hash(["name", "_id"]);
@@ -17,12 +17,12 @@ module.exports = function(scraper, corrections) {
     });
   };
 
-  // Caches categories into the database
+  // Caches categories into a single database entry
   categories.cache = function() {
     console.log("Caching categories");
     return async.promise(function() {
       var next = this;
-      models.Cache.sync({name: 'categories'}, function(err, cache) {
+      app.models.Cache.sync({name: 'categories'}, function(err, cache) {
         cache.set({name: 'categories', value: util.clone(categories.data)});
         cache.save(next.success);
       });
@@ -46,16 +46,15 @@ module.exports = function(scraper, corrections) {
 
     // Gets category names from the scraper
     return async.promise(function() {
-      scraper.getCategories(router.categories(), this.success);
+      app.scraper.getCategories(app.router.categories(), this.success);
     })
 
     // Iterates through different models and saves them
     .then(function(data) {
       async.map(categories.types, function(category) {
-        var model = models[category];
-
+        var model = app.models[category];
         var categoryData = data[category].map(function(name) { return {name: name}; });
-        categoryData = categories.applyCorrections(categoryData);
+        categoryData = categories.applyCorrections(categoryData, category);
 
         // Save categories
         categories.data[model.collectionName] = [];
@@ -79,19 +78,19 @@ module.exports = function(scraper, corrections) {
     })
 
     .then(function() {
-      console.log("Updated "+settings.categories.length+ " categories");
+      console.log("Updated "+categories.types.length+ " categories");
       this.success();
     });
   };
 
   // Applies any neccessary corrections to a category
-  categories.applyCorrections = function(data) {
-    if (corrections.additions[category]) {
-      data = corrections.additions[category].concat(data);
-    }
+  categories.applyCorrections = function(data, category) {
+    var additions = app.corrections.additions[category];
+    var removals = app.corrections.removals[category];
 
-    if (corrections.removals[category]) {
-      var removals = util.hash(corrections.removals[category], util.key('name'));
+    if (additions) data = additions.concat(data);
+    if (removals) {
+      var removals = util.hash(removals, util.key('name'));
       data = data.filter(function(item) { return !removals[item.name]; });
     }
 
