@@ -80,5 +80,13 @@ module.exports = function(mongoose) {
     return printing ? printing.gathererId : false;
   };
 
+  schemas.Card.methods.typeNames = function(types) {
+    return this.types.map(function(id) { return types[id].name; }).join(", ");
+  };
+
+  schemas.Card.methods.subtypeNames = function(subtypes) {
+    return this.subtypes.map(function(id) { return subtypes[id].name; }).join(", ");
+  };
+
   return schemas;
 };
