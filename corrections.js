@@ -74,7 +74,7 @@ corrections.replacements = {
     'Promo': {rarity: 'Special'}
   },
 
-  // Fixes for cards in the unglued/unhinged set
+  // Fixes for cards, predominantly in the unglued/unhinged set
   cards: {
     "B.F.M. (Big Furry Monster)": {
       subtypes: ["The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See"],
@@ -101,6 +101,11 @@ corrections.replacements = {
     },
     "Little Girl": {
       cost: "{1/2W}"
-    }
+    },
+    "Forest": { rules: [] },
+    "Mountain": { rules: [] },
+    "Swamp": { rules: [] },
+    "Plains": { rules: [] },
+    "Island": { rules: [] }
   }
 };
