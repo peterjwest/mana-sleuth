@@ -140,14 +140,14 @@ module.exports = function(app, async, util) {
     });
   };
 
-  cards.search = function(query) {
+  cards.search = function(params) {
     // Get required categories from the database
     return app.categories.get()
 
     // Perform the search
     .then(function() {
       var next = this;
-      var words = query.replace(/^\s+|\s+&/, "").split(/\s+/);
+      var words = params.query.replace(/^\s+|\s+&/, "").split(/\s+/);
       var length, item, term;
       var match = false;
       var matches = [];
@@ -198,8 +198,10 @@ module.exports = function(app, async, util) {
         }
       });
 
-      app.models.Card.find({'$and': criteria}).limit(20).run(function(err, cards) {
-        next.success(cards);
+      app.models.Card.find({'$and': criteria}).skip((params.page - 1) * 20).limit(20).run(function(err, cards) {
+        app.models.Card.count({'$and': criteria}, function(err, total) {
+          next.success(cards, total);
+        });
       });
     });
   };

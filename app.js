@@ -11,6 +11,7 @@ var scheduler = require('./util/scheduler.js');
 var util = require('./util/util.js');
 var modelGenerator = require('./util/model_generator.js');
 var memoryTracker = require('./util/memory_tracker.js');
+var pager = require('./pager.js');
 
 // App modules
 var app = {};
@@ -42,22 +43,24 @@ server.configure('development', function() {
   server.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 });
 
-server.get('/', function(request, response) {
-  response.render('index', {
-    title: "Mana Sleuth",
-    subtitle: "Streamlined MTG card search",
-    cards: false,
-    categories: false,
-    router: app.router,
-    util: util
-  });
-});
+// server.get('/', function(request, response) {
+//   response.render('index', {
+//     title: "Mana Sleuth",
+//     subtitle: "Streamlined MTG card search",
+//     cards: false,
+//     categories: false,
+//     router: app.router,
+//     util: util
+//   });
+// });
 
-server.post('/', function(request, response) {
-  app.cards.search(request.param("query")).then(function(cards) {
+server.get('/', function(request, response) {
+  request.query.page = parseInt(request.query.page || 1);
+  app.cards.search(request.query).then(function(cards, total) {
     response.render('index', {
       title: "Mana Sleuth",
       subtitle: "Streamlined MTG card search",
+      pager: pager(20, total, request.query.page),
       cards: cards,
       categories: app.categories,
       router: app.router,

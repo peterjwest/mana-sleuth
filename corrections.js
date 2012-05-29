@@ -106,6 +106,11 @@ corrections.replacements = {
     "Mountain": { rules: [] },
     "Swamp": { rules: [] },
     "Plains": { rules: [] },
-    "Island": { rules: [] }
+    "Island": { rules: [] },
+    "Snow-Covered Forest": { rules: [] },
+    "Snow-Covered Mountain": { rules: [] },
+    "Snow-Covered Swamp": { rules: [] },
+    "Snow-Covered Plains": { rules: [] },
+    "Snow-Covered Island": { rules: [] }
   }
 };

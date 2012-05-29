@@ -18,3 +18,4 @@ Then it uses (read: will use) some clever tricks to find exactly the cards you w
  - Paging
  - History JS and live loading
  - Add support for quoted terms
+ - Update corrections to use a standard format
