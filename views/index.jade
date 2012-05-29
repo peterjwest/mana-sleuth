@@ -11,6 +11,9 @@ if cards
         img(src=router.image(card.gathererId())).image
         .text
           h3.name: a(href=router.card(card.gathererId()))= card.name
-          h4= card.typeNames(categories.id.types) + " - " + card.subtypeNames(categories.id.subtypes)
+          h4
+            span.types= card.typeNames(categories.id.types)
+            if card.subtypes.length > 0
+              span.subtypes= " - "+card.subtypeNames(categories.id.subtypes)
           each rule in card.rules
             p.rule= rule
