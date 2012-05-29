@@ -9,7 +9,8 @@ if cards
     each card in cards
       article.card.span6
         img(src=router.image(card.gathererId())).image
-        h3.name: a(href=router.card(card.gathererId()))= card.name
-        h4= card.typeNames(categories.id.types) + " - " + card.subtypeNames(categories.id.subtypes)
-        each rule in card.rules
-          p.rule= rule
+        .text
+          h3.name: a(href=router.card(card.gathererId()))= card.name
+          h4= card.typeNames(categories.id.types) + " - " + card.subtypeNames(categories.id.subtypes)
+          each rule in card.rules
+            p.rule= rule
