@@ -53,7 +53,8 @@ server.get('/', function(request, response) {
       cards: cards,
       categories: app.categories,
       router: app.router,
-      util: util
+      util: util,
+      request: request
     });
   });
 });
@@ -63,3 +64,16 @@ server.listen(3000);
 // app.categories.update()
 //   .then(app.expansions.populate)
 //   .then(app.cards.update);
+
+util.url = function(pageUrl, params) {
+  var parsedUrl = url.parse(pageUrl, true);
+  parsedUrl.query = util.merge(parsedUrl.query, params || {});
+
+  for (key in parsedUrl) {
+    var value = parsedUrl[key];
+    if (value === undefined || value === null || value === false) delete parsedUrl[key];
+  };
+
+  delete parsedUrl.search;
+  return url.format(parsedUrl);
+};

@@ -72,7 +72,7 @@ util.self = function(item) { return item; };
 util.regEscape = function(str) { return str.replace(/([.?*+^$[\]\\(){}|-])/g, "\\$1"); };
 
 // Escapes a string for regex
-util.round = function(num, precision) { 
+util.round = function(num, precision) {
   var multiple = Math.pow(10, precision);
   return Math.round(num * multiple) / multiple;
 };
