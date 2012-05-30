@@ -12,11 +12,11 @@ module.exports = function(pageSize, totalItems, current) {
   pager.pagination = function() {
     var variation = 2;
     var lastPage = pager.totalPages();
-    var width = 3 + 2 * variation;
+    var width = 5 + 2 * variation;
     var distanceFrom = {start: pager.current - 1, end: lastPage - pager.current};
     var ellipsis = {
-      start: lastPage > width + 2 && distanceFrom.start > 2 + variation,
-      end: lastPage > width + 2 && distanceFrom.end > 2 + variation
+      start: lastPage > width && distanceFrom.start > 2 + variation,
+      end: lastPage > width && distanceFrom.end > 2 + variation
     };
     var before = ellipsis.start ? pager.current - variation - Math.max(2 + variation - distanceFrom.end, 0) : 1;
     var after = ellipsis.end ? pager.current + variation + Math.max(2 + variation - distanceFrom.start, 0) : lastPage;
