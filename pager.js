@@ -10,9 +10,10 @@ module.exports = function(pageSize, totalItems, current) {
   };
 
   pager.pagination = function() {
+    var variation = 2;
     var lastPage = pager.totalPages();
-    var before = Math.max(pager.current - 2, 1);
-    var after = Math.min(pager.current + 2, lastPage);
+    var before = Math.max(pager.current - (pager.current <= 5 ? variation + 2 : variation), 1);
+    var after = Math.min(pager.current + (pager.current <= 5 ? variation + 5 - pager.current : variation), lastPage);
     var pages = [];
     pages.push({name: "Prev", disabled: pager.current == 1});
     if (before > 1) {

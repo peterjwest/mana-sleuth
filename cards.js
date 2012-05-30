@@ -147,10 +147,13 @@ module.exports = function(app, async, util) {
     // Perform the search
     .then(function() {
       var next = this;
-      var words = params.query.replace(/^\s+|\s+&/, "").split(/\s+/);
       var length, item, term;
       var match = false;
       var matches = [];
+
+      if (!params.query) return next.success([], 0);
+
+      var words = params.query.replace(/^\s+|\s+&/, "").split(/\s+/);
 
       while(words.length > 0) {
         match = false;

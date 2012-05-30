@@ -3,13 +3,12 @@ form.search.well.form-inline(method='get')
     input.query(name="query", type='text', placeholder='Type anything')
     input.submit.btn.btn-primary(type='submit', value='Search')
 
-.paging.btn-group
-  for page in pager.pagination()
-    - active = page.active ? "btn-primary" : ""
-    - disabled = page.disabled ? "disabled" : ""
-    a.btn(href="#",class=active+" "+disabled)= page.name
-
-if cards
+if cards.length
+  .paging.btn-group
+    for page in pager.pagination()
+      - active = page.active ? "btn-primary" : ""
+      - disabled = page.disabled ? "disabled" : ""
+      a.btn(href="#",class=active+" "+disabled)= page.name
   h3= cards.length+" results of "+pager.totalItems
   section.cards.row
     each card in cards

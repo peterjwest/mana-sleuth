@@ -43,17 +43,6 @@ server.configure('development', function() {
   server.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 });
 
-// server.get('/', function(request, response) {
-//   response.render('index', {
-//     title: "Mana Sleuth",
-//     subtitle: "Streamlined MTG card search",
-//     cards: false,
-//     categories: false,
-//     router: app.router,
-//     util: util
-//   });
-// });
-
 server.get('/', function(request, response) {
   request.query.page = parseInt(request.query.page || 1);
   app.cards.search(request.query).then(function(cards, total) {
