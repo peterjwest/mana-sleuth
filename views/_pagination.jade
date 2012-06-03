@@ -1,0 +1,13 @@
+if pager.pages > 1
+.paging.btn-group
+  a.btn(href=util.url(request.originalUrl, {page: 1}))
+    i.icon-arrow-left
+
+  for page in pager.pagination()
+    - active = page.active ? "btn-primary" : ""
+    - disabled = page.disabled ? "disabled" : ""
+    a.btn(href=util.url(request.originalUrl, {page: page.number}), class=active+" "+disabled)
+      = page.name
+
+  a.btn(href=util.url(request.originalUrl, {page: 1}))
+    i.icon-arrow-right.icon-w

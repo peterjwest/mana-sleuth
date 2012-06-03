@@ -1,28 +1,23 @@
-module.exports = function(pageSize, totalItems, current) {
+module.exports = function(itemsPerPage, totalItems, current) {
   var pager = {
-    pageSize: pageSize,
+    itemsPerPage: itemsPerPage,
     totalItems: totalItems,
-    current: current
-  };
-
-  pager.totalPages = function() {
-    return Math.ceil(pager.totalItems / pager.pageSize);
+    current: current,
+    pages: Math.ceil(totalItems / itemsPerPage)
   };
 
   pager.pagination = function() {
-    var variation = 2;
-    var lastPage = pager.totalPages();
+    var variation = 1;
     var width = 5 + 2 * variation;
-    var distanceFrom = {start: pager.current - 1, end: lastPage - pager.current};
+    var distanceFrom = {start: pager.current - 1, end: pager.pages - pager.current};
     var ellipsis = {
-      start: lastPage > width && distanceFrom.start > 2 + variation,
-      end: lastPage > width && distanceFrom.end > 2 + variation
+      start: pager.pages > width && distanceFrom.start > 2 + variation,
+      end: pager.pages > width && distanceFrom.end > 2 + variation
     };
     var before = ellipsis.start ? pager.current - variation - Math.max(2 + variation - distanceFrom.end, 0) : 1;
-    var after = ellipsis.end ? pager.current + variation + Math.max(2 + variation - distanceFrom.start, 0) : lastPage;
+    var after = ellipsis.end ? pager.current + variation + Math.max(2 + variation - distanceFrom.start, 0) : pager.pages;
 
     var pages = [];
-    pages.push({name: "Prev", number: pager.current - 1, disabled: pager.current == 1});
     if (ellipsis.start) {
       pages.push({name: 1, number: 1});
       pages.push({name: "...", disabled: true});
@@ -31,10 +26,9 @@ module.exports = function(pageSize, totalItems, current) {
       pages.push({name: i, number: i, active: i == pager.current});
     }
     if (ellipsis.end) {
-      if (pager.current < lastPage - 2 - variation) pages.push({name: "...", disabled: true});
-      pages.push({name: lastPage, number: lastPage});
+      if (pager.current < pager.pages - 2 - variation) pages.push({name: "...", disabled: true});
+      pages.push({name: pager.pages, number: pager.pages});
     }
-    pages.push({name: "Next", disabled: pager.current == lastPage, number: pager.current + 1});
     return pages;
   };
 

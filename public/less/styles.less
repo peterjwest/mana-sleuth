@@ -1,6 +1,9 @@
 @import 'bootstrap/bootstrap.less';
 @import 'bootstrap/responsive.less';
 
+@iconSpritePath:      "../images/glyphicons-halflings.png";
+@iconWhiteSpritePath: "../images/glyphicons-halflings-white.png";
+
 // The colour palette
 @color1:   #cd0039;
 @color1Dark: #aa002c;
@@ -74,6 +77,12 @@ form.search {
     margin-right: 15px; margin-bottom: 10px;
     background: url(../images/card_back.png) no-repeat;
   }
+}
+
+.paging {
+  text-align: center;
+  padding: 2px 0 6px;
+  .btn { float: none; }
 }
 
 /* Adjusts image sizing for very small windows */
