@@ -1,17 +1,13 @@
 form.search.well.form-inline(method='get')
   .inputs
     input.query(name="query", type='text', placeholder='Type anything', value=request.query.query)
-    input.submit.btn.btn-primary(type='submit', value='Search')
+    input.submit.btn.btn-primary(type='submit', value='Search').xhr
 
-
-
-if cards.length
+if cards && cards.length
   include _pagination
-  
-  h3
-    = cards.length+" results"
-    if pager.pages > 1
-      = " of "+pager.totalItems
+
+  //.results-info: p.alert.alert-info
+    = "Found: "+pager.totalItems+" cards"
 
   section.cards.row
     each card in cards

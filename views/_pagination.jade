@@ -1,13 +1,13 @@
-if pager.pages > 1
-.paging.btn-group
-  a.btn(href=util.url(request.originalUrl, {page: 1}))
-    i.icon-arrow-left
+if pager.totalPages > 1
+  .paging.btn-group
 
-  for page in pager.pagination()
-    - active = page.active ? "btn-primary" : ""
-    - disabled = page.disabled ? "disabled" : ""
-    a.btn(href=util.url(request.originalUrl, {page: page.number}), class=active+" "+disabled)
-      = page.name
-
-  a.btn(href=util.url(request.originalUrl, {page: 1}))
-    i.icon-arrow-right.icon-w
+    for page in pager.pages
+      - active = page.active ? "btn-primary" : ""
+      - disabled = page.disabled ? "disabled" : ""
+      a.xhr.btn(href=util.url(request.originalUrl, {page: page.number}), class=active+" "+disabled)
+        if page.left
+          i.icon-chevron-left
+        if page.name
+          = page.name
+        if page.right
+          i.icon-chevron-right

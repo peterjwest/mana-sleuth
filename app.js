@@ -43,18 +43,25 @@ server.configure('development', function() {
   server.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 });
 
-server.get('/', function(request, response) {
-  request.query.page = parseInt(request.query.page || 1);
-  app.cards.search(request.query).then(function(cards, total) {
-    response.render('index', {
+var handleXhr = function(req, res, next) {
+  delete req.query.xhr
+  req.xhr = req.headers['x-requested-with'] == 'XMLHttpRequest';
+  next();
+};
+
+server.get('/', handleXhr, function(req, res) {
+  req.query.page = parseInt(req.query.page || 1);
+  app.cards.search(req.query).then(function(cards, total) {
+    res.render('index', {
+      layout: !req.xhr,
       title: "Mana Sleuth",
       subtitle: "Streamlined MTG card search",
-      pager: pager(20, total, request.query.page),
+      pager: pager(20, total, req.query.page),
       cards: cards,
       categories: app.categories,
       router: app.router,
       util: util,
-      request: request
+      request: req
     });
   });
 });
