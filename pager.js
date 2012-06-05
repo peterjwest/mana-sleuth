@@ -1,8 +1,8 @@
 module.exports = function(itemsPerPage, totalItems, current) {
   var pager = {
-    itemsPerPage: itemsPerPage,
-    totalItems: totalItems,
-    current: current,
+    itemsPerPage: parseInt(itemsPerPage),
+    totalItems: parseInt(totalItems),
+    current: parseInt(current),
     totalPages: Math.ceil(totalItems / itemsPerPage),
     pages: []
   };
@@ -20,7 +20,7 @@ module.exports = function(itemsPerPage, totalItems, current) {
     for (var i = before; i <= after; i++) {
       pager.pages.push({name: i, number: i, active: i == pager.current});
     }
-    pager.pages.push({number: pager.current + 1, right: true, disabled: pager.current == pager.totalPages});
+    pager.pages.push({number: Math.min(pager.current + 1, pager.totalPages), right: true, disabled: pager.current == pager.totalPages});
     pager.pages.push({name: pager.totalPages, number: pager.totalPages, active: pager.current == pager.totalPages});
   }
   else {

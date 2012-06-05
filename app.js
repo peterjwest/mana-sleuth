@@ -43,14 +43,39 @@ server.configure('development', function() {
   server.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 });
 
+var routes = {
+  cards: ['query', 'page']
+};
+
+var decodeUrl = function(req, res, next) {
+  var route = routes[req.params[0]] || [];
+  var params = (req.params[1] || "").split("/");
+  var data = {};
+
+  route.map(function(param, i) {
+    data[param] = params[i];
+  });
+
+  req.query = util.merge(data, req.query);
+  next();
+};
+
+var encodeUrl = function() {
+  var keys = util.keys(req.query).sort();
+  var url = '';
+  keys.map(function() {
+
+  });
+};
+
 var handleXhr = function(req, res, next) {
   delete req.query.xhr
   req.xhr = req.headers['x-requested-with'] == 'XMLHttpRequest';
   next();
 };
 
-server.get('/', handleXhr, function(req, res) {
-  req.query.page = parseInt(req.query.page || 1);
+server.get(/^(?:\/|\/(cards)\/?(.*))$/, decodeUrl, handleXhr, function(req, res) {
+  req.query.page = req.query.page || 1;
   app.cards.search(req.query).then(function(cards, total) {
     res.render('index', {
       layout: !req.xhr,
@@ -73,14 +98,20 @@ server.listen(3000);
 //   .then(app.cards.update);
 
 util.url = function(pageUrl, params) {
-  var parsedUrl = url.parse(pageUrl, true);
-  parsedUrl.query = util.merge(parsedUrl.query, params || {});
+  var urlData = url.parse(pageUrl, true);
+  var query = urlData.query;
+  query = util.merge(query, params || {});
 
-  for (key in parsedUrl) {
-    var value = parsedUrl[key];
-    if (value === undefined || value === null || value === false) delete parsedUrl[key];
+  // Prevents the previous URL being used
+  delete urlData.search;
+
+  delete query.xhr;
+
+  for (key in query) {
+    var value = query[key];
+    if (value === undefined || value === null || value === false) delete query[key];
+    else query[key] = (query[key] + "").replace(" ", "+");
   };
 
-  delete parsedUrl.search;
-  return url.format(parsedUrl);
+  return url.format(urlData);
 };
