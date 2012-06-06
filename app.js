@@ -48,11 +48,12 @@ var routes = {
 };
 
 var decodeUrl = function(req, res, next) {
-  var route = routes[req.params[0]] || [];
+  req.route = req.params[0];
+  var paramNames = routes[req.route] || [];
   var params = (req.params[1] || "").split("/");
   var data = {};
 
-  route.map(function(param, i) {
+  paramNames.map(function(param, i) {
     data[param] = params[i];
   });
 
@@ -60,12 +61,13 @@ var decodeUrl = function(req, res, next) {
   next();
 };
 
-var encodeUrl = function() {
-  var keys = util.keys(req.query).sort();
-  var url = '';
-  keys.map(function() {
-
+var encodeUrl = function(req, res) {
+  var paramNames = routes[req.route] || [];
+  var url = '/'+req.route;
+  paramNames.map(function(param) {
+    if (req.query[param]) url += '/'+req.query[param];
   });
+  return url;
 };
 
 var handleXhr = function(req, res, next) {
@@ -75,6 +77,8 @@ var handleXhr = function(req, res, next) {
 };
 
 server.get(/^(?:\/|\/(cards)\/?(.*))$/, decodeUrl, handleXhr, function(req, res) {
+  console.log(req.route, req.query);
+  console.log(encodeUrl(req, res));
   req.query.page = req.query.page || 1;
   app.cards.search(req.query).then(function(cards, total) {
     res.render('index', {
