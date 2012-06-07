@@ -10,20 +10,22 @@ module.exports = function(app, async, util) {
 
     // Update cards
     .then(function() {
+      var next = this;
       var run = function() {
-        setTimeout(function() { cards.updateNext(); }, 0);
+        setTimeout(function() { cards.updateNext().then(run); }, 0);
       };
       run();
     });
   };
 
   // This uses the card details and printings pages to get the full details of a card
-  cards.updateNext = function(success) {
-    var cards = [];
-    var details = {cards: []};
+  cards.updateNext = function() {
+    var self = {};
+    self.cards = [];
+    self.details = {cards: []};
 
     // Get the card last updated
-    async.promise(function() {
+    return async.promise(function() {
       var next = this;
       app.models.Card.lastUpdated().run(function(err, card) { next.success(card) });
     })
@@ -32,7 +34,7 @@ module.exports = function(app, async, util) {
     .then(function(card) {
       if (card) {
         console.log("Updating "+card.name);
-        cards.push(card);
+        self.cards.push(card);
         var urls = {
           details: app.router.card(card.gathererId()),
           printings: app.router.printings(card.gathererId())
@@ -44,7 +46,8 @@ module.exports = function(app, async, util) {
 
     // Apply corrections and substitute database references
     .then(function(details) {
-      details.cards.map(function(card) {
+      self.details = details;
+      self.details.cards.map(function(card) {
 
         // Applying replacements
         var applyReplacements = function(item, corrections) {
@@ -89,55 +92,57 @@ module.exports = function(app, async, util) {
     .then(function() {
       var next = this;
 
-      if (details.multipart) {
-        async.promise(function() {
-          var next = this;
-          var altName = util.alternate(details.multipart.cards, cards[0].name);
-          app.models.Card.findOne({name: altName}, function(err, card) { next.success(card); });
-        })
+      if (!self.details.multipart) return next.success();
 
-        .then(function(card) {
-          console.log("Updating "+card.name+" (multipart)");
-          cards.push(card);
+      async.promise(function() {
+        var next = this;
+        var altName = util.alternate(self.details.multipart.cards, self.cards[0].name);
+        app.models.Card.findOne({name: altName}, function(err, card) { next.success(card); });
+      })
 
-          var altCard = cards[0].name == details.cards[0].name ? cards[1] : cards[0];
-          if (details.multipart.type == "split") {
-            var urls = {
-              details: app.router.card(card.gathererId(), altCard.name),
-              printings: app.router.printings(card.gathererId())
-            };
-            app.scraper.getCardDetails(urls, function(data) {
-              details.cards = details.cards.concat(data.cards);
-              next.success();
-            });
-          }
-          else next.success();
-        });
-      }
-      else next.success();
+      .then(function(card) {
+        console.log("Updating "+card.name+" (multipart)");
+        self.cards.push(card);
+
+        var altCard = self.cards[0].name == self.details.cards[0].name ? self.cards[1] : self.cards[0];
+        if (self.details.multipart.type == "split") {
+          var urls = {
+            details: app.router.card(card.gathererId(), altCard.name),
+            printings: app.router.printings(card.gathererId())
+          };
+          app.scraper.getCardDetails(urls, function(data) {
+            self.details.cards = self.details.cards.concat(data.cards);
+            next.success();
+          });
+        }
+        else next.success();
+      });
+    })
+
+    // Prepare details and push cards
+    .then(function() {
+      self.details.name = util.hash(self.details.cards, util.key('name'));
+      this.success(self.cards);
     })
 
     // Save cards
-    .then(function() {
-      var cardDetails = util.hash(details.cards, function(card) { return card.name; });
-      async.map(cards, function(card) {
-        card.set(cardDetails[card.name]);
+    .map(function(card) {
+      card.set(self.details.name[card.name]);
 
-        //Set multipart details
-        if (details.multipart) {
-          card.set({multipart: {
-            card: util.alternate(cards, card)._id,
-            type: card.multipart.type || details.multipart.type
-          }});
-        }
+      //Set multipart details
+      if (self.details.multipart) {
+        card.set({multipart: {
+          card: util.alternate(cards, card)._id,
+          type: card.multipart.type || self.details.multipart.type
+        }});
+      }
 
-        card.save(this.success);
-      }).then(this.success);
+      card.save(this.success);
     })
 
     .then(function() {
       console.log("Updated");
-      if (success) success();
+      this.success();
     });
   };
 
