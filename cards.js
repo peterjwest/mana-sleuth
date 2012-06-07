@@ -76,9 +76,10 @@ module.exports = function(app, async, util) {
           return app.categories.name.subtypes[subtype];
         }).filter(function(subtype) { return subtype; });
 
-        card.legalities.map(function(legality) {
+        card.legalities = card.legalities.map(function(legality) {
           legality.format = app.categories.name.formats[legality.format];
-        });
+          return legality;
+        }).filter(function(legality) { return legality.format; });
       });
 
       this.success();

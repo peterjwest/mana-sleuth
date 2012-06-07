@@ -38,12 +38,13 @@ module.exports = function(mongoose) {
 
   schemas.Expansion = new Schema({
     name: String,
+    released: Date,
     complete: {type: Boolean, default: false},
     populated: {type: Boolean, default: false}
   });
 
   schemas.Format = new Schema({
-    name: String
+    name: String,
   });
 
   schemas.Block = new Schema({

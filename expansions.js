@@ -33,7 +33,7 @@ module.exports = function(app, async, util) {
 
         // Substitute colour references
         details.colours = details.colours.map(function(colour) {
-          return collections.colours[colour];
+          return app.categories.name.colours[colour];
         }).filter(function(colour) { return colour; });
 
         // Complete printing
@@ -41,7 +41,7 @@ module.exports = function(app, async, util) {
           if (app.corrections.replacements.rarities[printing.rarity]) {
             printing.rarity = app.corrections.replacements.rarities[printing.rarity].rarity;
           }
-          printing.rarity = collections.rarities[printing.rarity];
+          printing.rarity = app.categories.name.rarities[printing.rarity];
           printing.expansion = expansion._id;
           return printing;
         });
