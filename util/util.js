@@ -1,6 +1,6 @@
 var util = exports;
 
-// Gets an array of all the keys of an object
+// Gets an array of all the properties of an object
 util.values = function(obj) {
   var key, array = [];
   for (key in obj) {
@@ -9,7 +9,7 @@ util.values = function(obj) {
   return array;
 };
 
-// Gets an array of all the keys of an object
+// Gets an array of all the property names of an object
 util.keys = function(obj) {
   var key, array = [];
   for (key in obj) {
