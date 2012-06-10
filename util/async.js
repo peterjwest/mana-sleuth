@@ -3,12 +3,13 @@
 // March 2012
 
 // TODO
-// Add fail event
+// Suport error event better
 // Prevent multiple firing?
-// Make it work for falsey values
 
 var async = exports || {};
-var nothing = function() {};
+
+// Wraps a function in a timeout to prevent recursion based overflows
+var unscope = function(fn) { return function() { setTimeout(fn, 0); }; };
 
 // Runs a function in a promise interface
 async.promise = function(fn) {
@@ -29,7 +30,7 @@ async.promise = function(fn) {
     // Adds then method to the promise
     promise.then = function(success, fail) {
       var nextPromise = create();
-      promise.propagate = function() {
+      promise.propagate = unscope(function() {
         var response = success.apply(nextPromise.next, promise.result);
         if (response && response.then) {
           if (!nextPromise.propagate) {
@@ -46,7 +47,7 @@ async.promise = function(fn) {
             });
           }
         }
-      };
+      });
       if (promise.resolved) promise.propagate();
       return nextPromise;
     };
