@@ -36,7 +36,7 @@ module.exports = function(app, async, util) {
           return app.categories.name.colours[colour];
         }).filter(function(colour) { return colour; });
 
-        // Complete printing
+        // Populate printing
         details.printings = details.printings.map(function(printing) {
           if (app.corrections.replacements.rarities[printing.rarity]) {
             printing.rarity = app.corrections.replacements.rarities[printing.rarity].rarity;
