@@ -157,14 +157,45 @@ module.exports = function(app, async, util) {
       var scrub = function(string) { return string.replace(/\s+/g, " "); };
       var normalise = function(string) { return string.toLowerCase().replace(/[^a-z0-9]/g, ""); };
       var terms = [];
-      var query = trim(scrub(params.query));
+      var query = trim(scrub(params.query || ""));
 
       var keywords = {
-        colourless: {pattern: /^colou?rless$/i, criteria: {colours: {$size: 0}}},
-        monocoloured: {pattern: /^monocolou?red$/i, criteria: {colours: {$size: 1}}},
+        strength: {
+          pattern: /^[0-9+\-^\*]*\/[0-9+\-^\*]*$/,
+          criteria: function(keyword) {
+            if (keyword === "/") return {};
+            var strength = keyword.split("/");
+            console.log(strength);
+            var criteria = {types: app.categories.name.types['Creature']._id};
+            if (strength[0] !== '') criteria['power'] = strength[0];
+            if (strength[1] !== '') criteria['toughness'] = strength[1];
+            return criteria;
+          }
+        },
+        colourless: {pattern: /^colou?rless$/i, criteria: function() { return {colours: {$size: 0}}; }},
+        monocoloured: {pattern: /^monocolou?red$/i, criteria: function() { return {colours: {$size: 1}}; }},
+        coloured: {
+          pattern: /^colou?red$/i,
+          criteria: function() {
+            return {$or: [
+              {colours: {$size: 1}},
+              {colours: {$size: 2}},
+              {colours: {$size: 3}},
+              {colours: {$size: 4}},
+              {colours: {$size: 5}}
+            ]}
+          }
+        },
         multicoloured: {
           pattern: /^multicolou?red$/i,
-          criteria: {$or: [{colours: {$size: 2}}, {colours: {$size: 3}}, {colours: {$size: 4}}, {colours: {$size: 5}}]}
+          criteria: function() {
+            {$or: [
+              {colours: {$size: 2}},
+              {colours: {$size: 3}},
+              {colours: {$size: 4}},
+              {colours: {$size: 5}}
+            ]}
+          }
         }
       }
 
@@ -184,7 +215,7 @@ module.exports = function(app, async, util) {
         // Detects category keywords for non quoted terms
         terms = terms.map(function(term) {
           var subterms = [];
-          var subterm, length, categoryItem, termValue;
+          var subterm, length, categoryItem, value;
           var match = false, keyword = false;
 
           if (term.type !== 'words') return [term];
@@ -197,13 +228,13 @@ module.exports = function(app, async, util) {
               for (category in app.categories.id) {
                 for (i in app.categories.id[category]) {
                   categoryItem = app.categories.id[category][i];
-                  termValue = normalise(subterm.join(" "));
+                  value = subterm.join(" ");
                   keyword = false;
                   for (word in keywords) {
-                    if (termValue.match(keywords[word].pattern)) keyword = word;
+                    if (value.match(keywords[word].pattern)) keyword = word;
                   };
-                  if (keyword) match = {type: 'keyword', word: keyword};
-                  else if (normalise(subterm.join(" ")) == normalise(categoryItem.name)) {
+                  if (keyword) match = {type: 'keyword', word: keyword, value: value};
+                  else if (normalise(value) == normalise(categoryItem.name)) {
                     match = {type: category, obj: categoryItem};
                   }
                 }
@@ -240,7 +271,7 @@ module.exports = function(app, async, util) {
           criteria.push({$or: [{rules: match}, {name: match}]});
         }
         else if (term.type === 'keyword') {
-          criteria.push(keywords[term.word].criteria);
+          criteria.push(keywords[term.word].criteria(term.value));
         }
         else {
           var obj = {};
