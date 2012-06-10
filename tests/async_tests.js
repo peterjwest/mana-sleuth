@@ -158,11 +158,11 @@ var promiseMaker = function(value) {
 async.promise(function() {
   var next = this;
   setTimeout(function() {
-    next.success(5, 3, 2);
+    next.success(5);
   }, 30);
 })
 .then(promiseMaker)
-.then(function(value, value) {
+.then(function(value) {
   tester.complete("test-async-promise-integration-with-async", value, 11);
 });
 
