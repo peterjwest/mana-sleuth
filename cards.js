@@ -153,37 +153,76 @@ module.exports = function(app, async, util) {
     // Perform the search
     .then(function() {
       var next = this;
-      var length, item, term;
-      var match = false;
-      var matches = [];
+      var trim = function(string) { return string.replace(/^ | $/g, ""); };
+      var scrub = function(string) { return string.replace(/\s+/g, " "); };
+      var normalise = function(string) { return string.toLowerCase().replace(/[^a-z0-9]/g, ""); };
+      var terms = [];
+      var query = trim(scrub(params.query));
 
-      if (!params.query) return next.success([], 0);
-
-      var words = params.query.replace(/^\s+|\s+&/, "").split(/\s+/);
-
-      while(words.length > 0) {
-        match = false;
-
-        for (length = words.length; length > 0; length--) {
-          term = words.slice(0, length);
-          for (category in app.categories.id) {
-            for (j in app.categories.id[category]) {
-              item = app.categories.id[category][j];
-              if (term.join(" ").toLowerCase().replace(/[^a-z0-9]/g, "") == item.name.toLowerCase().replace(/[^a-z0-9]/g, "")) {
-                match = {type: category, obj: item};
-              }
-            }
-          }
-          if (match) break;
+      var keywords = {
+        colourless: {pattern: /^colou?rless$/i, criteria: {colours: {$size: 0}}},
+        monocoloured: {pattern: /^monocolou?red$/i, criteria: {colours: {$size: 1}}},
+        multicoloured: {
+          pattern: /^multicolou?red$/i,
+          criteria: {$or: [{colours: {$size: 2}}, {colours: {$size: 3}}, {colours: {$size: 4}}, {colours: {$size: 5}}]}
         }
-        if (match) matches.push(match);
-        else {
-          matches.push({type: 'rules', term: words[0]});
-          length = 1;
-        }
-
-        words = words.slice(length);
       }
+
+      if (query) {
+        // Splits the search query into terms, splitting quoted and non quoted words
+        var tokens = query.match(/[^'"]+|['"]/g);
+        var quote = false;
+        tokens.map(trim).filter(util.self).map(function(token) {
+          if (token === quote) quote = false;
+          else if (token.match(/['"]/)) quote = token;
+          else {
+            if (quote) terms.push({type: 'rules', term: token});
+            else terms.push({type: 'words', words: token.split(" ")});
+          }
+        });
+
+        // Detects category keywords for non quoted terms
+        terms = terms.map(function(term) {
+          var subterms = [];
+          var subterm, length, categoryItem, termValue;
+          var match = false, keyword = false;
+
+          if (term.type !== 'words') return [term];
+
+          while(term.words.length > 0) {
+            match = false;
+
+            for (length = term.words.length; length > 0; length--) {
+              subterm = term.words.slice(0, length);
+              for (category in app.categories.id) {
+                for (i in app.categories.id[category]) {
+                  categoryItem = app.categories.id[category][i];
+                  termValue = normalise(subterm.join(" "));
+                  keyword = false;
+                  for (word in keywords) {
+                    if (termValue.match(keywords[word].pattern)) keyword = word;
+                  };
+                  if (keyword) match = {type: 'keyword', word: keyword};
+                  else if (normalise(subterm.join(" ")) == normalise(categoryItem.name)) {
+                    match = {type: category, obj: categoryItem};
+                  }
+                }
+              }
+              if (match) break;
+            }
+            if (match) subterms.push(match);
+            else {
+              subterms.push({type: 'rules', term: term.words[0]});
+              length = 1;
+            }
+
+            term.words = term.words.slice(length);
+          }
+          return subterms;
+        }).reduce(function(a, b) { return a.concat(b); }, []);
+      }
+
+      console.log(terms);
 
       var mongoAttrs = {
         colours: 'colours',
@@ -195,20 +234,26 @@ module.exports = function(app, async, util) {
       };
 
       var criteria =  [];
-      matches.map(function(match) {
-        if (match.type == "rules") {
-          var match = new RegExp("\\b"+util.regEscape(match.term)+"\\b", "i");
+      terms.map(function(term) {
+        if (term.type === 'rules') {
+          var match = new RegExp("\\b"+util.regEscape(term.term)+"\\b", "i");
           criteria.push({$or: [{rules: match}, {name: match}]});
+        }
+        else if (term.type === 'keyword') {
+          criteria.push(keywords[term.word].criteria);
         }
         else {
           var obj = {};
-          obj[mongoAttrs[match.type]] = match.obj._id;
+          obj[mongoAttrs[term.type]] = term.obj._id;
           criteria.push(obj);
         }
       });
 
-      app.models.Card.find({'$and': criteria}).skip((params.page - 1) * 20).limit(20).run(function(err, cards) {
-        app.models.Card.count({'$and': criteria}, function(err, total) {
+      console.log(criteria);
+
+      var conditions = criteria.length > 0 ? {'$and': criteria} : {};
+      app.models.Card.find(conditions).skip((params.page - 1) * 20).limit(20).run(function(err, cards) {
+        app.models.Card.count(conditions, function(err, total) {
           next.success(cards, total);
         });
       });
