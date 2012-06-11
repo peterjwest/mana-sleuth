@@ -38,6 +38,7 @@ module.exports = function(mongoose) {
 
   schemas.Expansion = new Schema({
     name: String,
+    gathererName: String,
     released: Date,
     complete: {type: Boolean, default: false},
     populated: {type: Boolean, default: false}
@@ -45,29 +46,35 @@ module.exports = function(mongoose) {
 
   schemas.Format = new Schema({
     name: String,
+    gathererName: String
   });
 
   schemas.Block = new Schema({
     name: String,
+    gathererName: String,
     expansions: [Schema.ObjectId]
   });
 
   schemas.Colour = new Schema({
     name: String,
+    gathererName: String,
   });
 
   schemas.Type = new Schema({
     name: String,
+    gathererName: String,
     genuine: {type: Boolean, default: true}
   });
 
   schemas.Subtype = new Schema({
     name: String,
+    gathererName: String,
     genuine: {type: Boolean, default: true}
   });
 
   schemas.Rarity = new Schema({
     name: String,
+    gathererName: String,
   });
 
   schemas.Cache = new Schema({

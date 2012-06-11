@@ -52,7 +52,7 @@ module.exports = function(app, async, util) {
     .then(function(data) {
       async.map(categories.types, function(category) {
         var model = app.models[category];
-        var categoryData = data[category].map(function(name) { return {name: name}; });
+        var categoryData = data[category].map(function(name) { return {name: name, gathererName: name}; });
         categoryData = categories.applyCorrections(categoryData, category);
 
         // Save categories
@@ -60,9 +60,10 @@ module.exports = function(app, async, util) {
         async.map(categoryData, function(details) {
           var next = this;
 
-          model.sync({name: details.name}, function(err, item) {
+          model.sync({gathererName: details.gathererName}, function(err, item) {
             categories.data[model.collectionName].push(item);
             item.set(details);
+            //item.gathererName = item.name;
             item.save(next.success);
           });
         }).then(this.success);
@@ -86,11 +87,22 @@ module.exports = function(app, async, util) {
   categories.applyCorrections = function(data, category) {
     var additions = app.corrections.additions[category];
     var removals = app.corrections.removals[category];
+    var replacements = app.corrections.replacements[category];
 
     if (additions) data = additions.concat(data);
     if (removals) {
-      var removals = util.hash(removals, util.key('name'));
-      data = data.filter(function(item) { return !removals[item.name]; });
+      var removals = util.hash(removals, util.key('gathererName'));
+      data = data.filter(function(item) { return !removals[item.gathererName]; });
+    }
+    if (replacements) {
+      data.map(function(item) {
+        var replacement = replacements[item.gathererName];
+        console.log(item, replacement);
+        if (replacement) {
+
+          for (name in replacement) item[name] = replacement[name];
+        }
+      });
     }
 
     return data;

@@ -38,9 +38,9 @@ module.exports = function(app, async, util) {
 
         // Populate printing
         details.printings = details.printings.map(function(printing) {
-          if (app.corrections.replacements.rarities[printing.rarity]) {
-            printing.rarity = app.corrections.replacements.rarities[printing.rarity].rarity;
-          }
+          var replacement = app.corrections.replacements.Rarity[printing.rarity];
+          if (replacement) printing.rarity = replacement.rarity;
+
           printing.rarity = app.categories.name.rarities[printing.rarity];
           printing.expansion = expansion._id;
           return printing;

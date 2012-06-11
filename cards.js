@@ -62,14 +62,12 @@ module.exports = function(app, async, util) {
 
         // Applying type replacement corrections
         var type = card.types.join(" ");
-        if (app.corrections.replacements.types[type] !== null) {
-          applyReplacements(card, app.corrections.replacements.types[type])
-        }
+        var replacement = app.corrections.replacements.Type[type];
+        if (replacement !== null) applyReplacements(card, replacement);
 
         // Applying card replacement corrections
-        if (app.corrections.replacements.cards[card.name]) {
-          applyReplacements(card, app.corrections.replacements.cards[card.name]);
-        }
+        var replacement = app.corrections.replacements.Card[card.name];
+        if (replacement) applyReplacements(card, replacement);
 
         card.types = card.types.map(function(type) {
           return app.categories.name.types[type];

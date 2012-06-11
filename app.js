@@ -97,9 +97,9 @@ server.get(/^(?:\/|\/(cards)\/?(.*))$/, decodeUrl, handleXhr, function(req, res)
 
 server.listen(3000);
 
-// app.categories.update()
-//   .then(app.expansions.populate)
-//   .then(app.cards.update);
+app.categories.update()
+  .then(app.expansions.populate)
+  .then(app.cards.update);
 
 util.url = function(pageUrl, params) {
   var urlData = url.parse(pageUrl, true);

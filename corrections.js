@@ -4,66 +4,66 @@ var corrections = exports;
 // These are additions for categories (e.g. type, subtype) not included in the gatherer database
 corrections.additions = {
   Type: [
-    {name: "Token", genuine: true},
-    {name: "Eaturecray", genuine: false}
+    {gathererName: "Token", genuine: true},
+    {gathererName: "Eaturecray", genuine: false}
   ],
   Subtype: [
-    {name: "The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See", genuine: false},
-    {name: "Donkey", genuine: false},
-    {name: "Lord", genuine: false},
-    {name: "Igpay", genuine: false},
-    {name: "Townsfolk", genuine: false},
-    {name: "Chicken", genuine: false},
-    {name: "Egg", genuine: false},
-    {name: "Gamer", genuine: false},
-    {name: "Clamfolk", genuine: false},
-    {name: "Elves", genuine: false},
-    {name: "Hero", genuine: false},
-    {name: "Bureaucrat", genuine: false},
-    {name: "Goblins", genuine: false},
-    {name: "Mime", genuine: false},
-    {name: "Cow", genuine: false},
-    {name: "Child", genuine: false},
-    {name: "Lady of Proper Etiquette", genuine: false},
-    {name: "Waiter", genuine: false},
-    {name: "Dinosaur", genuine: false},
-    {name: "Paratrooper", genuine: false},
-    {name: "Designer", genuine: false},
-    {name: "Ship", genuine: false},
-    {name: "Mummy", genuine: false}
+    {gathererName: "The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See", genuine: false},
+    {gathererName: "Donkey", genuine: false},
+    {gathererName: "Lord", genuine: false},
+    {gathererName: "Igpay", genuine: false},
+    {gathererName: "Townsfolk", genuine: false},
+    {gathererName: "Chicken", genuine: false},
+    {gathererName: "Egg", genuine: false},
+    {gathererName: "Gamer", genuine: false},
+    {gathererName: "Clamfolk", genuine: false},
+    {gathererName: "Elves", genuine: false},
+    {gathererName: "Hero", genuine: false},
+    {gathererName: "Bureaucrat", genuine: false},
+    {gathererName: "Goblins", genuine: false},
+    {gathererName: "Mime", genuine: false},
+    {gathererName: "Cow", genuine: false},
+    {gathererName: "Child", genuine: false},
+    {gathererName: "Lady of Proper Etiquette", genuine: false},
+    {gathererName: "Waiter", genuine: false},
+    {gathererName: "Dinosaur", genuine: false},
+    {gathererName: "Paratrooper", genuine: false},
+    {gathererName: "Designer", genuine: false},
+    {gathererName: "Ship", genuine: false},
+    {gathererName: "Mummy", genuine: false}
   ]
 };
 
 // These are removals for invald categories in the gatherer database
 corrections.removals = {
   Type: [
-    {name: "Plane"},
-    {name: "Ongoing"},
-    {name: "Vanguard"},
-    {name: "Scheme"},
+    {gathererName: "Plane"},
+    {gathererName: "Ongoing"},
+    {gathererName: "Vanguard"},
+    {gathererName: "Scheme"},
   ],
   Subtype: [
-    {name: "Shadowmoor"},
-    {name: "Lorwyn"},
-    {name: "Mirrodin"},
-    {name: "Zendikar"},
+    {gathererName: "Shadowmoor"},
+    {gathererName: "Lorwyn"},
+    {gathererName: "Mirrodin"},
+    {gathererName: "Zendikar"},
   ],
   Colour: [
-    {name: "Colorless"}
+    {gathererName: "Colorless"}
   ],
   Rarity: [
-    {name: "Promo"},
-    {name: "Land"}
+    {gathererName: "Promo"},
+    {gathererName: "Land"}
   ],
-  Format: [
-    {name: "Vanguard"},
-    {name: "Promo set for Gatherer"}
+  Expansion: [
+    {gathererName: "Vanguard"},
+    {gathererName: "Promo set for Gatherer"}
   ]
 };
 
 corrections.replacements = {
   // Updates names and adds release dates for expansions
-  expansions: {
+  Expansion: {
     'Alara Reborn': {released: new Date('April 30 ,2009')},
     'Alliances': {released: new Date('June 10, 1996')},
     'Anthologies': {released: new Date('November 1, 1998')},
@@ -161,6 +161,7 @@ corrections.replacements = {
     'Torment': {released: new Date('February 4, 2002')},
     'Unglued': {released: new Date('August 17, 1998')},
     'Unhinged': {released: new Date('November 19, 2004')},
+    'Unlimited Edition': {released: new Date('December 1 1993')},
     'Urza\'s Destiny': {released: new Date('June 7, 1999')},
     'Urza\'s Legacy': {released: new Date('February 15, 1999')},
     'Urza\'s Saga': {released: new Date('October 12, 1998')},
@@ -170,12 +171,11 @@ corrections.replacements = {
     'Zendikar': {released: new Date('October 2, 2009')},
     'Battle Royale Box Set': {name: 'Battle Royale', released: new Date('November 12 1999')},
     'Beatdown Box Set': {name: 'Beatdown', released: new Date('December 1 2000')},
-    'Magic: The Gathering-Commander': {name: 'Commander', released: new Date('June 17 2011')},
-    'Unlimited Edition': {name: 'Unlimited', released: new Date('December 1 1993')},
+    'Magic: The Gathering-Commander': {name: 'Commander', released: new Date('June 17 2011')}
   },
 
   // These replace outdated types with their modern equivalent
-  types: {
+  Type: {
     'Interrupt': {types: ['Instant']},
     'Summon Legend': {types: ['Legendary', 'Creature']},
     'Summon': {types: ['Creature']},
@@ -185,13 +185,13 @@ corrections.replacements = {
   },
 
   // Removes the erratically used 'Land' rarity, and the once used 'Promo' rarity
-  rarities: {
+  Rarity: {
     'Land': {rarity: 'Common'},
     'Promo': {rarity: 'Special'}
   },
 
   // Fixes for cards, predominantly in the unglued/unhinged set
-  cards: {
+  Card: {
     "B.F.M. (Big Furry Monster)": {
       subtypes: ["The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See"],
       rules: [
