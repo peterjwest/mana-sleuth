@@ -97,7 +97,6 @@ module.exports = function(app, async, util) {
     if (replacements) {
       data.map(function(item) {
         var replacement = replacements[item.gathererName];
-        console.log(item, replacement);
         if (replacement) {
 
           for (name in replacement) item[name] = replacement[name];

@@ -130,7 +130,7 @@ module.exports = function(app, async, util) {
       //Set multipart details
       if (self.details.multipart) {
         card.set({multipart: {
-          card: util.alternate(cards, card)._id,
+          card: util.alternate(self.cards, card)._id,
           type: card.multipart.type || self.details.multipart.type
         }});
       }
@@ -163,7 +163,6 @@ module.exports = function(app, async, util) {
           criteria: function(keyword) {
             if (keyword === "/") return {};
             var strength = keyword.split("/");
-            console.log(strength);
             var criteria = {types: app.categories.name.types['Creature']._id};
             if (strength[0] !== '') criteria['power'] = strength[0];
             if (strength[1] !== '') criteria['toughness'] = strength[1];
