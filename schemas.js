@@ -82,7 +82,11 @@ module.exports = function(mongoose) {
     value: {}
   })
 
-  // Method to find gatherer id for a card
+  schemas.GathererPage = new Schema({
+    url: String,
+    html: String
+  })
+
   schemas.Card.methods.gathererId = function() {
     var printing = this.printings[0];
     return printing ? printing.gathererId : false;
@@ -94,6 +98,11 @@ module.exports = function(mongoose) {
 
   schemas.Card.methods.subtypeNames = function(subtypes) {
     return this.subtypes.map(function(id) { return subtypes[id].name; }).join(", ");
+  };
+
+  schemas.Card.statics.lastUpdated = function(fn) {
+    var query = this.findOne({complete: false}).asc('lastUpdated');
+    return fn ? query.run(fn) : query;
   };
 
   return schemas;

@@ -24,6 +24,14 @@ app.categories = require('./categories.js')(app, async, util);
 app.expansions = require('./expansions.js')(app, async, util);
 app.cards = require('./cards.js')(app, async, util);
 
+app.scraper.onPageLoad = function(url, html) {
+  app.models.GathererPage.sync({url: url}, function(err, page) {
+    page.url = url;
+    page.html = html;
+    page.save();
+  });
+};
+
 mongoose.connect('mongodb://localhost/mana_sleuth');
 memoryTracker.update();
 

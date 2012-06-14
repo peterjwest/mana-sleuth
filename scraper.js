@@ -1,14 +1,19 @@
 module.exports = function(request, cheerio, util) {
   var scraper = {};
 
+  scraper.onPageLoad = function() {};
+
   // Gets the response of page and gives it to the callback function
-  scraper.requestPage = function(uri, success) {
+  scraper.requestPage = function(url, success) {
     var tries = 0;
     var threshold = 3;
     var attempt = function() {
       tries++;
-      request({uri: uri}, function (error, response, html) {
-        if (html) success(cheerio.load(html));
+      request({uri: url}, function (error, response, html) {
+        if (html) {
+          if (scraper.onPageLoad) scraper.onPageLoad(url, html);
+          success(cheerio.load(html));
+        }
         else if (tries < threshold) attempt();
       });
     };

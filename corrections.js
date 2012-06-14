@@ -30,7 +30,8 @@ corrections.additions = {
     {gathererName: "Paratrooper", genuine: false},
     {gathererName: "Designer", genuine: false},
     {gathererName: "Ship", genuine: false},
-    {gathererName: "Mummy", genuine: false}
+    {gathererName: "Mummy", genuine: false},
+    {gathererName: "Gus", genuine: false}
   ]
 };
 
