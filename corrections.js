@@ -4,61 +4,61 @@ var corrections = exports;
 // These are additions for categories (e.g. type, subtype) not included in the gatherer database
 corrections.additions = {
   Type: [
-    {gathererName: "Token", genuine: true},
-    {gathererName: "Eaturecray", genuine: false}
+    {name: "Token", genuine: true},
+    {name: "Eaturecray", genuine: false}
   ],
   Subtype: [
-    {gathererName: "The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See", genuine: false},
-    {gathererName: "Donkey", genuine: false},
-    {gathererName: "Lord", genuine: false},
-    {gathererName: "Igpay", genuine: false},
-    {gathererName: "Townsfolk", genuine: false},
-    {gathererName: "Chicken", genuine: false},
-    {gathererName: "Egg", genuine: false},
-    {gathererName: "Gamer", genuine: false},
-    {gathererName: "Clamfolk", genuine: false},
-    {gathererName: "Elves", genuine: false},
-    {gathererName: "Hero", genuine: false},
-    {gathererName: "Bureaucrat", genuine: false},
-    {gathererName: "Goblins", genuine: false},
-    {gathererName: "Mime", genuine: false},
-    {gathererName: "Cow", genuine: false},
-    {gathererName: "Child", genuine: false},
-    {gathererName: "Lady of Proper Etiquette", genuine: false},
-    {gathererName: "Waiter", genuine: false},
-    {gathererName: "Dinosaur", genuine: false},
-    {gathererName: "Paratrooper", genuine: false},
-    {gathererName: "Designer", genuine: false},
-    {gathererName: "Ship", genuine: false},
-    {gathererName: "Mummy", genuine: false},
-    {gathererName: "Gus", genuine: false}
+    {name: "The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See", genuine: false},
+    {name: "Donkey", genuine: false},
+    {name: "Lord", genuine: false},
+    {name: "Igpay", genuine: false},
+    {name: "Townsfolk", genuine: false},
+    {name: "Chicken", genuine: false},
+    {name: "Egg", genuine: false},
+    {name: "Gamer", genuine: false},
+    {name: "Clamfolk", genuine: false},
+    {name: "Elves", genuine: false},
+    {name: "Hero", genuine: false},
+    {name: "Bureaucrat", genuine: false},
+    {name: "Goblins", genuine: false},
+    {name: "Mime", genuine: false},
+    {name: "Cow", genuine: false},
+    {name: "Child", genuine: false},
+    {name: "Lady of Proper Etiquette", genuine: false},
+    {name: "Waiter", genuine: false},
+    {name: "Dinosaur", genuine: false},
+    {name: "Paratrooper", genuine: false},
+    {name: "Designer", genuine: false},
+    {name: "Ship", genuine: false},
+    {name: "Mummy", genuine: false},
+    {name: "Gus", genuine: false}
   ]
 };
 
 // These are removals for invald categories in the gatherer database
 corrections.removals = {
   Type: [
-    {gathererName: "Plane"},
-    {gathererName: "Ongoing"},
-    {gathererName: "Vanguard"},
-    {gathererName: "Scheme"},
+    {name: "Plane"},
+    {name: "Ongoing"},
+    {name: "Vanguard"},
+    {name: "Scheme"},
   ],
   Subtype: [
-    {gathererName: "Shadowmoor"},
-    {gathererName: "Lorwyn"},
-    {gathererName: "Mirrodin"},
-    {gathererName: "Zendikar"},
+    {name: "Shadowmoor"},
+    {name: "Lorwyn"},
+    {name: "Mirrodin"},
+    {name: "Zendikar"},
   ],
   Colour: [
-    {gathererName: "Colorless"}
+    {name: "Colorless"}
   ],
   Rarity: [
-    {gathererName: "Promo"},
-    {gathererName: "Land"}
+    {name: "Promo"},
+    {name: "Land"}
   ],
   Expansion: [
-    {gathererName: "Vanguard"},
-    {gathererName: "Promo set for Gatherer"}
+    {name: "Vanguard"},
+    {name: "Promo set for Gatherer"}
   ]
 };
 
