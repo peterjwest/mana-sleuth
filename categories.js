@@ -53,8 +53,11 @@ module.exports = function(app, async, util) {
     .then(function(data) {
       async.map(categories.types, function(category) {
         var model = app.models[category];
-        var categoryData = data[category].map(function(name) { return {name: name, gathererName: name}; });
+        var categoryData = data[category].map(function(name) { return {name: name}; });
         categoryData = categories.applyCorrections(categoryData, category);
+        categoryData.map(function(item) {
+          item.gathererName = item.name;
+        });
 
         // Save categories
         categories.data[model.collectionName] = [];
@@ -91,12 +94,12 @@ module.exports = function(app, async, util) {
 
     if (additions) data = additions.concat(data);
     if (removals) {
-      var removals = util.hash(removals, util.key('gathererName'));
-      data = data.filter(function(item) { return !removals[item.gathererName]; });
+      var removals = util.hash(removals, util.key('name'));
+      data = data.filter(function(item) { return !removals[item.name]; });
     }
     if (replacements) {
       data.map(function(item) {
-        var replacement = replacements[item.gathererName];
+        var replacement = replacements[item.name];
         if (replacement) {
 
           for (name in replacement) item[name] = replacement[name];
