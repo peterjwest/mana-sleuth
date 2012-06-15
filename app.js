@@ -16,21 +16,14 @@ var pager = require('./pager.js');
 // App modules
 var app = {};
 app.router = require('./router.js');
-app.scraper = require('./scraper.js')(request, cheerio, util);
 app.schemas = require('./schemas.js')(mongoose);
 app.models = modelGenerator(mongoose, app.schemas);
+var requestCache = require('./requestCache.js')(app, request);
+app.scraper = require('./scraper.js')(requestCache, cheerio, util);
 app.corrections = require('./corrections.js');
 app.categories = require('./categories.js')(app, async, util);
 app.expansions = require('./expansions.js')(app, async, util);
 app.cards = require('./cards.js')(app, async, util);
-
-app.scraper.onPageLoad = function(url, html) {
-  app.models.GathererPage.sync({url: url}, function(err, page) {
-    page.url = url;
-    page.html = html;
-    page.save();
-  });
-};
 
 mongoose.connect('mongodb://localhost/mana_sleuth');
 memoryTracker.update();

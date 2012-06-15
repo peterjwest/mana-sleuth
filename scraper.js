@@ -9,11 +9,8 @@ module.exports = function(request, cheerio, util) {
     var threshold = 3;
     var attempt = function() {
       tries++;
-      request({uri: url}, function (error, response, html) {
-        if (html) {
-          if (scraper.onPageLoad) scraper.onPageLoad(url, html);
-          success(cheerio.load(html));
-        }
+      request({url: url}, function (error, response, html) {
+        if (html) success(cheerio.load(html));
         else if (tries < threshold) attempt();
       });
     };
