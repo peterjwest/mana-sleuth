@@ -44,51 +44,10 @@ module.exports = function(app, async, util) {
       else { console.log("Updated all cards"); }
     })
 
-    // Apply corrections and substitute database references
-    .then(function(details) {
-      self.details = details;
-      self.details.cards.map(function(card) {
-
-        // Applying replacements
-        var applyReplacements = function(item, corrections) {
-          for (i in corrections) {
-            if (typeof corrections[i] == "Object" || typeof corrections[i] == 'Array') {
-              if (typeof corrections[i] == 'Array') item[i] = [];
-              applyReplacements(item[i], corrections[i]);
-            }
-            else item[i] = corrections[i];
-          }
-        };
-
-        // Applying type replacement corrections
-        var type = card.types.join(" ");
-        var replacement = app.corrections.replacements.Type[type];
-        if (replacement !== null) applyReplacements(card, replacement);
-
-        // Applying card replacement corrections
-        var replacement = app.corrections.replacements.Card[card.name];
-        if (replacement) applyReplacements(card, replacement);
-
-        card.types = card.types.map(function(type) {
-          return app.categories.name.types[type];
-        }).filter(function(type) { return type; });
-
-        card.subtypes = card.subtypes.map(function(subtype) {
-          return app.categories.name.subtypes[subtype];
-        }).filter(function(subtype) { return subtype; });
-
-        card.legalities = card.legalities.map(function(legality) {
-          legality.format = app.categories.name.formats[legality.format];
-          return legality;
-        }).filter(function(legality) { return legality.format; });
-      });
-
-      this.success();
-    })
-
     // Handle multipart cards
-    .then(function() {
+    .then(function(details) {
       var next = this;
+      self.details = details;
 
       if (!self.details.multipart) return next.success();
 
@@ -117,6 +76,48 @@ module.exports = function(app, async, util) {
       });
     })
 
+    // Apply corrections and substitute database references
+    .then(function() {
+      self.details.cards.map(function(card) {
+
+        // Applying replacements
+        var applyReplacements = function(item, corrections) {
+          for (i in corrections) {
+            if (typeof corrections[i] == "Object" || typeof corrections[i] == 'Array') {
+              if (typeof corrections[i] == 'Array') item[i] = [];
+              applyReplacements(item[i], corrections[i]);
+            }
+            else item[i] = corrections[i];
+          }
+        };
+
+        // Applying type replacement corrections
+        var type = card.types.join(" ");
+        var replacement = app.corrections.replacements.Type[type];
+        if (replacement !== null) applyReplacements(card, replacement);
+
+        // Applying card replacement corrections
+        var replacement = app.corrections.replacements.Card[card.name];
+        if (replacement) applyReplacements(card, replacement);
+
+        card.types = card.types.map(function(type) {
+          return app.categories.gathererName.types[type];
+        }).filter(function(type) { return type; });
+
+        card.subtypes = card.subtypes.map(function(subtype) {
+          return app.categories.gathererName.subtypes[subtype];
+        }).filter(function(subtype) { return subtype; });
+
+        card.legalities = card.legalities.filter(function(legality) {
+          var format = app.categories.gathererName.formats[legality.format];
+          legality.format = (format || {})._id;
+          return legality.format;
+        });
+      });
+
+      this.success();
+    })
+
     // Prepare details and push cards
     .then(function() {
       self.details.name = util.hash(self.details.cards, util.key('name'));
@@ -134,11 +135,10 @@ module.exports = function(app, async, util) {
           type: card.multipart.type || self.details.multipart.type
         }});
       }
-
       card.save(this.success);
     })
 
-    .then(function() {
+    .then(function(errors) {
       console.log("Updated");
       this.success();
     });
@@ -158,6 +158,12 @@ module.exports = function(app, async, util) {
       var query = trim(scrub(params.query || ""));
 
       var keywords = {
+        cost: {
+          pattern: /^[0-9]+$/,
+          criteria: function(keyword) {
+            return {cmc: parseInt(keyword)};
+          }
+        },
         strength: {
           pattern: /^[0-9+\-^\*]*\/[0-9+\-^\*]*$/,
           criteria: function(keyword) {
@@ -231,7 +237,7 @@ module.exports = function(app, async, util) {
                     if (value.match(keywords[word].pattern)) keyword = word;
                   };
                   if (keyword) match = {type: 'keyword', word: keyword, value: value};
-                  else if (normalise(value) == normalise(categoryItem.name)) {
+                  else if (normalise(value) == normalise(categoryItem.name || "")) {
                     match = {type: category, obj: categoryItem};
                   }
                 }
