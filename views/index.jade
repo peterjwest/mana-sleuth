@@ -19,6 +19,8 @@ if cards && cards.length
             span.types= card.typeNames(categories.id.types)
             if card.subtypes.length > 0
               span.subtypes= " - "+card.subtypeNames(categories.id.subtypes)
+            if card.creature(categories.id.types)
+              span.strength= " "+card.power+"/"+card.toughness
           each rule in card.rules
             p.rule= rule
 
