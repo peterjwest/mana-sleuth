@@ -127,6 +127,7 @@ module.exports = function(app, async, util) {
     // Save cards
     .map(function(card) {
       card.set(self.details.name[card.name]);
+      card.colourCount = card.colours.length;
 
       //Set multipart details
       if (self.details.multipart) {
@@ -175,30 +176,15 @@ module.exports = function(app, async, util) {
             return criteria;
           }
         },
-        colourless: {pattern: /^colou?rless$/i, criteria: function() { return {colours: {$size: 0}}; }},
-        monocoloured: {pattern: /^monocolou?red$/i, criteria: function() { return {colours: {$size: 1}}; }},
+        colourless: {pattern: /^colou?rless$/i, criteria: function() { return {colourCount: 0}; }},
+        monocoloured: {pattern: /^monocolou?red$/i, criteria: function() { return {colourCount: 1}; }},
         coloured: {
           pattern: /^colou?red$/i,
-          criteria: function() {
-            return {$or: [
-              {colours: {$size: 1}},
-              {colours: {$size: 2}},
-              {colours: {$size: 3}},
-              {colours: {$size: 4}},
-              {colours: {$size: 5}}
-            ]}
-          }
+          criteria: function() { return {colourCount: {$gt: 0}}; }
         },
         multicoloured: {
           pattern: /^multicolou?red$/i,
-          criteria: function() {
-            {$or: [
-              {colours: {$size: 2}},
-              {colours: {$size: 3}},
-              {colours: {$size: 4}},
-              {colours: {$size: 5}}
-            ]}
-          }
+          criteria: function() { return {colourCount: {$gt: 1}}; }
         }
       }
 
