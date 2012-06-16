@@ -120,6 +120,7 @@ module.exports = function(request, cheerio, util) {
             .filter(function(rule) { return rule; }),
           power: strength.power || '',
           toughness: strength.toughness || '',
+          loyalty: text(find(rows, /loyalty/i)),
           flavourText: text(find(rows, /flavor text/i)),
           watermark: text(find(rows, /watermark/i)),
           complete: true

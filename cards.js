@@ -159,10 +159,30 @@ module.exports = function(app, async, util) {
       var query = trim(scrub(params.query || ""));
 
       var keywords = {
-        cost: {
-          pattern: /^[0-9]+$/,
-          criteria: function(keyword) {
-            return {cmc: parseInt(keyword)};
+        cost: {pattern: /^[0-9]+$/, criteria: function(keyword) { return {cmc: parseInt(keyword)}; }},
+        colourless: {pattern: /^colou?rless$/i, criteria: function() { return {colourCount: 0}; }},
+        monocoloured: {pattern: /^monocolou?red$/i, criteria: function() { return {colourCount: 1}; }},
+        coloured: {pattern: /^colou?red$/i, criteria: function() { return {colourCount: {$gt: 0}}; }},
+        multicoloured: {pattern: /^multicolou?red$/i, criteria: function() { return {colourCount: {$gt: 1}}; }},
+        nonbasic: {
+          pattern: /^nonbasic$/i,
+          criteria: function() {
+            return {types: {$nin: [app.categories.name.types['Basic']._id]}}
+          }
+        },
+        nonland: {
+          pattern: /^nonland$/i,
+          criteria: function() {
+            return {types: {$nin: [app.categories.name.types['Land']._id]}}
+          }
+        },
+        permanent: {
+          pattern: /^permanent$/i,
+          criteria: function() {
+            return {types: {$nin: [
+              app.categories.name.types['Instant']._id,
+              app.categories.name.types['Sorcery']._id
+            ]}}
           }
         },
         strength: {
@@ -175,16 +195,6 @@ module.exports = function(app, async, util) {
             if (strength[1] !== '') criteria['toughness'] = strength[1];
             return criteria;
           }
-        },
-        colourless: {pattern: /^colou?rless$/i, criteria: function() { return {colourCount: 0}; }},
-        monocoloured: {pattern: /^monocolou?red$/i, criteria: function() { return {colourCount: 1}; }},
-        coloured: {
-          pattern: /^colou?red$/i,
-          criteria: function() { return {colourCount: {$gt: 0}}; }
-        },
-        multicoloured: {
-          pattern: /^multicolou?red$/i,
-          criteria: function() { return {colourCount: {$gt: 1}}; }
         }
       }
 
@@ -253,6 +263,8 @@ module.exports = function(app, async, util) {
         rarities: 'printings.rarity'
       };
 
+      console.log(JSON.stringify(terms));
+
       var criteria =  [];
       terms.map(function(term) {
         if (term.type === 'rules') {
@@ -269,7 +281,7 @@ module.exports = function(app, async, util) {
         }
       });
 
-      console.log(criteria);
+      console.log(JSON.stringify({'$and': criteria}));
 
       var conditions = criteria.length > 0 ? {'$and': criteria} : {};
       app.models.Card.find(conditions).skip((params.page - 1) * 20).limit(20).run(function(err, cards) {

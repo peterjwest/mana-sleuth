@@ -82,6 +82,13 @@ server.get(/^(?:\/|\/(cards)\/?(.*))$/, decodeUrl, handleXhr, function(req, res)
   console.log(encodeUrl(req, res));
   req.query.page = req.query.page || 1;
   app.cards.search(req.query).then(function(cards, total) {
+
+    if (cards) {
+      cards.map(function(card) {
+        card.objects(app.categories.id);
+      });
+    }
+
     res.render('index', {
       layout: !req.xhr,
       title: "Mana Sleuth",

@@ -18,6 +18,7 @@ module.exports = function(mongoose) {
     name: String,
     power: {type: String, match: /^\d*|\*$/},
     toughness: {type: String, match: /^\d*|\*$/},
+    loyalty: Number,
     cost: String,
     cmc: Number,
     colours: [Schema.ObjectId],
@@ -93,20 +94,28 @@ module.exports = function(mongoose) {
     return printing ? printing.gathererId : false;
   };
 
-  schemas.Card.methods.typeNames = function(types) {
-    return this.types.map(function(id) { return types[id].name; }).join(", ");
+  schemas.Card.methods.objects = function(objects) {
+    this.objects = {};
+    if (objects) {
+      for (key in objects) {
+        if (this[key]) {
+          this.objects[key] =  this[key].map(function(id) { return objects[key][id]; });
+        }
+      }
+    }
+    return this.objects;
   };
 
-  schemas.Card.methods.creature = function(types) {
-    var creature = false;
-    this.types.map(function(id) {
-      if (types[id].name == 'Creature') creature = true;
+  schemas.Card.methods.names = function(key) {
+    return this.objects[key].map(function(obj) { return obj.name; }).join(", ");
+  };
+
+  schemas.Card.methods.has = function(key, name) {
+    var found = false;
+    this.objects[key].map(function(obj) {
+      if (obj.name == name) found = true;
     });
-    return creature;
-  };
-
-  schemas.Card.methods.subtypeNames = function(subtypes) {
-    return this.subtypes.map(function(id) { return subtypes[id].name; }).join(", ");
+    return found;
   };
 
   schemas.Card.statics.lastUpdated = function(fn) {

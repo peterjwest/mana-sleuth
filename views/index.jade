@@ -16,11 +16,13 @@ if cards && cards.length
         .text
           h3.name: a(href=router.card(card.gathererId()))= card.name
           h4
-            span.types= card.typeNames(categories.id.types)
+            span.types= card.names('types')
             if card.subtypes.length > 0
-              span.subtypes= " - "+card.subtypeNames(categories.id.subtypes)
-            if card.creature(categories.id.types)
-              span.strength= " "+card.power+"/"+card.toughness
+              span.subtypes= " - "+card.names('subtypes')
+            if card.has('types', 'Creature')
+              span.strength= " ("+card.power+"/"+card.toughness+")"
+            if card.has('types', 'Planeswalker')
+              span.strength= " ("+card.loyalty+")"
           each rule in card.rules
             p.rule= rule
 
