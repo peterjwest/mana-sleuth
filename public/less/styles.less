@@ -28,9 +28,12 @@
 @cardWidth: 222px;
 @cardHeight: 310px;
 
+body {
+  min-width: 225px;
+}
+
 .container {
   margin-bottom: 20px;
-  min-width: 210px;
 }
 
 form.search {
@@ -79,7 +82,7 @@ form.search {
 
   .image {
     position: absolute; left: 0;
-    height: @cardHeight; min-width: @cardWidth;
+    height: @cardHeight; min-width: @cardWidth; max-width: @cardWidth + 3;
     margin-right: 15px; margin-bottom: 10px;
     background: url(../images/card_back.png) no-repeat;
   }
@@ -89,14 +92,6 @@ form.search {
   text-align: center;
   margin-bottom: 16px;
   .btn { float: none; }
-}
-
-/* Adjusts image sizing for very small windows */
-@media (max-width: 265px) {
-  .card .image {
-    height: auto; min-width: 0;
-    background: none;
-  }
 }
 
 /* Right aligns search button */
