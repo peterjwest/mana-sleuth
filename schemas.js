@@ -21,6 +21,7 @@ module.exports = function(mongoose) {
     cost: String,
     cmc: Number,
     colours: [Schema.ObjectId],
+    colourCount: Number,
     rules: [String],
     lastUpdated: Date,
     flavourText: String,
@@ -94,6 +95,14 @@ module.exports = function(mongoose) {
 
   schemas.Card.methods.typeNames = function(types) {
     return this.types.map(function(id) { return types[id].name; }).join(", ");
+  };
+
+  schemas.Card.methods.creature = function(types) {
+    var creature = false;
+    this.types.map(function(id) {
+      if (types[id].name == 'Creature') creature = true;
+    });
+    return creature;
   };
 
   schemas.Card.methods.subtypeNames = function(subtypes) {
