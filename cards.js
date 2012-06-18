@@ -154,7 +154,8 @@ module.exports = function(app, async, util) {
       var next = this;
       var trim = function(string) { return string.replace(/^ | $/g, ""); };
       var scrub = function(string) { return string.replace(/\s+/g, " "); };
-      var normalise = function(string) { return string.toLowerCase().replace(/[^a-z0-9]/g, ""); };
+      var normalise = function(string) { return string.toLowerCase().replace(/[^a-z0-9']/g, ""); };
+      var firstUpper = function(string) { return string.charAt(0).toUpperCase() + string.slice(1); };
       var terms = [];
       var query = trim(scrub(params.query || ""));
 
@@ -164,16 +165,16 @@ module.exports = function(app, async, util) {
         monocoloured: {pattern: /^monocolou?red$/i, criteria: function() { return {colourCount: 1}; }},
         coloured: {pattern: /^colou?red$/i, criteria: function() { return {colourCount: {$gt: 0}}; }},
         multicoloured: {pattern: /^multicolou?red$/i, criteria: function() { return {colourCount: {$gt: 1}}; }},
-        nonbasic: {
-          pattern: /^nonbasic$/i,
-          criteria: function() {
-            return {types: {$nin: [app.categories.name.types['Basic']._id]}}
-          }
-        },
-        nonland: {
-          pattern: /^nonland$/i,
-          criteria: function() {
-            return {types: {$nin: [app.categories.name.types['Land']._id]}}
+        non: {
+          pattern: /^non-?([a-z]+)$/i,
+          criteria: function(keyword) {
+            var colour = app.categories.name.colours[firstUpper(normalise(keyword[1]))];
+            var type = app.categories.name.types[firstUpper(normalise(keyword[1]))];
+            var subtype = app.categories.name.subtypes[firstUpper(normalise(keyword[1]))];
+            if (colour) return {colours: {$nin: [colour._id]}};
+            if (type) return {types: {$nin: [type._id]}};
+            if (subtype) return {subtypes: {$nin: [subtype._id]}};
+            return {type: 'rules', term: keyword[0]};
           }
         },
         permanent: {
@@ -200,11 +201,11 @@ module.exports = function(app, async, util) {
 
       if (query) {
         // Splits the search query into terms, splitting quoted and non quoted words
-        var tokens = query.match(/[^'"]+|['"]/g);
+        var tokens = query.match(/[^"]+|["]/g);
         var quote = false;
         tokens.map(trim).filter(util.self).map(function(token) {
           if (token === quote) quote = false;
-          else if (token.match(/['"]/)) quote = token;
+          else if (token.match("\"")) quote = token;
           else {
             if (quote) terms.push({type: 'rules', term: token});
             else terms.push({type: 'words', words: token.split(" ")});
@@ -215,7 +216,7 @@ module.exports = function(app, async, util) {
         terms = terms.map(function(term) {
           var subterms = [];
           var subterm, length, categoryItem, value;
-          var match = false, keyword = false;
+          var match = false, keyword = false, search;
 
           if (term.type !== 'words') return [term];
 
@@ -230,10 +231,15 @@ module.exports = function(app, async, util) {
                   value = subterm.join(" ");
                   keyword = false;
                   for (word in keywords) {
-                    if (value.match(keywords[word].pattern)) keyword = word;
+                    search = value.match(keywords[word].pattern);
+                    if (search) {
+                      match = {
+                        type: 'keyword', keyword: word,
+                        match: search
+                      };
+                    }
                   };
-                  if (keyword) match = {type: 'keyword', word: keyword, value: value};
-                  else if (normalise(value) == normalise(categoryItem.name || "")) {
+                  if (!match && normalise(value) == normalise(categoryItem.name || "")) {
                     match = {type: category, obj: categoryItem};
                   }
                 }
@@ -272,7 +278,7 @@ module.exports = function(app, async, util) {
           criteria.push({$or: [{rules: match}, {name: match}]});
         }
         else if (term.type === 'keyword') {
-          criteria.push(keywords[term.word].criteria(term.value));
+          criteria.push(keywords[term.keyword].criteria(term.match));
         }
         else {
           var obj = {};
