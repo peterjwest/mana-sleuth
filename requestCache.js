@@ -1,6 +1,17 @@
-module.exports = function(app, request) {
+module.exports = function(mongoose, request, modelGenerator) {
+  var connection = mongoose.createConnection('mongodb://localhost/gatherer');
+
+  var schemas = {
+    Page: new mongoose.Schema({
+      url: String,
+      html: String
+    })
+  };
+
+  var models = modelGenerator(connection, schemas);
+
   return function(options, fn) {
-    app.models.GathererPage.sync({url: options.url}, function(err, page) {
+    models.Page.sync({url: options.url}, function(err, page) {
       if (page.unsaved) {
         request(options, function(error, response, html) {
           page.url = options.url;

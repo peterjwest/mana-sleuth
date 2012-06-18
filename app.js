@@ -4,6 +4,7 @@ var url = require('url');
 var http = require('http');
 var cheerio = require("cheerio");
 var mongoose = require('mongoose');
+var connection = mongoose.createConnection('mongodb://localhost/mana_sleuth');
 
 // Util modules
 var async = require('./util/async.js');
@@ -17,15 +18,14 @@ var pager = require('./pager.js');
 var app = {};
 app.router = require('./router.js');
 app.schemas = require('./schemas.js')(mongoose);
-app.models = modelGenerator(mongoose, app.schemas);
-var requestCache = require('./requestCache.js')(app, request);
+app.models = modelGenerator(connection, app.schemas);
+var requestCache = require('./requestCache.js')(mongoose, request, modelGenerator);
 app.scraper = require('./scraper.js')(requestCache, cheerio, util);
 app.corrections = require('./corrections.js');
 app.categories = require('./categories.js')(app, async, util);
 app.expansions = require('./expansions.js')(app, async, util);
 app.cards = require('./cards.js')(app, async, util);
 
-mongoose.connect('mongodb://localhost/mana_sleuth');
 memoryTracker.update();
 
 var express = require('express');

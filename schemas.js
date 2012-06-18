@@ -82,12 +82,7 @@ module.exports = function(mongoose) {
   schemas.Cache = new Schema({
     name: String,
     value: {}
-  })
-
-  schemas.GathererPage = new Schema({
-    url: String,
-    html: String
-  })
+  });
 
   schemas.Card.methods.gathererId = function() {
     var printing = this.printings[0];
