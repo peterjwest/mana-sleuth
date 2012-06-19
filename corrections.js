@@ -175,6 +175,17 @@ corrections.replacements = {
     'Magic: The Gathering-Commander': {name: 'Commander', released: new Date('June 17 2011')}
   },
 
+  // These mark popular formats as more important
+  Format: {
+    'Standard': {priority: 7},
+    'Commander': {priority: 6},
+    'Extended': {priority: 5},
+    'Modern': {priority: 4},
+    'Vintage': {priority: 3},
+    'Legacy': {priority: 2},
+    'Classic': {priority: 1},
+  },
+
   // These replace outdated types with their modern equivalent
   Type: {
     'Interrupt': {types: ['Instant']},

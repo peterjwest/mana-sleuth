@@ -48,7 +48,8 @@ module.exports = function(mongoose) {
 
   schemas.Format = new Schema({
     name: String,
-    gathererName: String
+    gathererName: String,
+    priority: {type: Number, default: 0},
   });
 
   schemas.Block = new Schema({
