@@ -83,11 +83,19 @@ server.get(/^(?:\/|\/(cards)\/?(.*))$/, decodeUrl, handleXhr, function(req, res)
   req.query.page = req.query.page || 1;
   app.cards.search(req.query).then(function(cards, total) {
 
+    // Maps through cards, ading in references and sorting expansions
     if (cards) {
+      var expansions = app.categories.id.expansions;
       cards.map(function(card) {
+        card.printings = card.printings.sort(function(a,b) {
+          return expansions[b.expansion].released - expansions[a.expansion].released;
+        });
         card.objects(app.categories.id);
       });
     }
+
+    // Sorts formats by priority
+    var formats = app.categories.data.formats.sort(function(a, b) { return b.priority - a.priority; });
 
     res.render('index', {
       layout: !req.xhr,
@@ -95,6 +103,7 @@ server.get(/^(?:\/|\/(cards)\/?(.*))$/, decodeUrl, handleXhr, function(req, res)
       subtitle: "Streamlined MTG card search",
       pager: pager(20, total, req.query.page),
       cards: cards,
+      formats: formats,
       categories: app.categories,
       router: app.router,
       util: util,
