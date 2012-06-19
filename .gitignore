@@ -1,4 +1,5 @@
-node_modules
-npm-debug.log
-mana_sleuth.sublime-project
-mana_sleuth.sublime-workspace
+/node_modules
+/npm-debug.log
+/mana_sleuth.sublime-project
+/mana_sleuth.sublime-workspace
+/gatherer_backup
