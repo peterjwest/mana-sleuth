@@ -1,7 +1,13 @@
 form.search.well.form-inline(method='get')
   .inputs
-    input.query(name="query", type='text', placeholder='Type anything', value=request.query.query)
+    .query-input-wrapper
+      input.query(name="query", type='text', placeholder='Type anything', value=request.query.query)
     input.submit.btn.btn-primary(type='submit', value='Search').xhr
+  .extras.well
+    select.format(data-placeholder="Choose a format")
+      option
+      each format in formats
+        option(name=format.name)= format.name
 
 if cards && cards.length
   include _pagination
