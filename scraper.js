@@ -10,8 +10,14 @@ module.exports = function(request, cheerio, util) {
     var attempt = function() {
       tries++;
       request({url: url}, function (error, response, html) {
-        if (html) success(cheerio.load(html));
-        else if (tries < threshold) attempt();
+        if (html) {
+          var $ = cheerio.load(html);
+          if (!$("title").text().match(/temporarily\s+unavailable/i)) {
+            return success($);
+          }
+        }
+        if (tries < threshold) attempt();
+        else console.log("Error: Cannot access site");
       });
     };
     attempt();
