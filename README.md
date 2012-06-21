@@ -2,20 +2,23 @@
 
 This app is designed to provide awesome and quick Magic The Gathering card searching.
 It scrapes [gatherer](http://gatherer.wizards.com/Pages/Default.aspx), in order to populate a mongo database.
-Then it uses (read: will use) some clever tricks to find exactly the cards you want with the minimum hassle.
+
+It's designed to find the cards you want with the least time and effort.
+When you search, the site autodetects card names, colours, types, subtypes, expansions, formats and rarities.
+It also supports keywords such as permanents, nonlands, noncreature, multicoloured and colorless cards
+Use quotes to search for specific rules.
 
 ##TODO
 
- - Build frontend
- - Finish database saving
- - Better handling of request failure, save failure - logging?
+ - Better handling of request and save failure
  - Save block/expansion relationships
  - Store images on S3
- - Double update bug for split cards
  - Fix fixture cards overwriting printings
  - Fix flavour text missing newlines
  - Mark un-set cards and remove from search
- - Paging
- - History JS and live loading
- - Add support for quoted terms
- - Update corrections to use a standard format
+ - Update corrections to use a standard, closure format
+ - Mark tokens and remove from search
+ - Support multipart cards on frontend
+ - Add details to unglued token cards, if applicable
+ - Improve matching for punctuation in names, rules
+ - Add gatherer name, fix token naming
