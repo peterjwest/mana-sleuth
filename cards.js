@@ -39,6 +39,7 @@ module.exports = function(app, async, util) {
           details: app.router.card(card.gathererId()),
           printings: app.router.printings(card.gathererId())
         };
+
         app.scraper.getCardDetails(urls, this.success);
       }
       else { console.log("Updated all cards"); }
@@ -258,8 +259,6 @@ module.exports = function(app, async, util) {
         }).reduce(function(a, b) { return a.concat(b); }, []);
       }
 
-      console.log(terms);
-
       var mongoAttrs = {
         colours: 'colours',
         types: 'types',
@@ -268,8 +267,6 @@ module.exports = function(app, async, util) {
         expansions: 'printings.expansion',
         rarities: 'printings.rarity'
       };
-
-      console.log(JSON.stringify(terms));
 
       var criteria =  [];
       terms.map(function(term) {
@@ -287,10 +284,8 @@ module.exports = function(app, async, util) {
         }
       });
 
-      console.log(JSON.stringify({'$and': criteria}));
-
       var conditions = criteria.length > 0 ? {'$and': criteria} : {};
-      app.models.Card.find(conditions).skip((params.page - 1) * 20).limit(20).run(function(err, cards) {
+      app.models.Card.find(conditions).skip((params.page - 1) * 20).limit(20).sort('name', 1).run(function(err, cards) {
         app.models.Card.count(conditions, function(err, total) {
           next.success(cards, total);
         });
