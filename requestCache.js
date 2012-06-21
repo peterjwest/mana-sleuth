@@ -10,7 +10,7 @@ module.exports = function(mongoose, request, modelGenerator) {
 
   var models = modelGenerator(connection, schemas);
 
-  return function(options, fn) {
+  var requestCache =function(options, fn) {
     models.Page.sync({url: options.url}, function(err, page) {
       if (page.unsaved) {
         request(options, function(error, response, html) {
@@ -24,4 +24,11 @@ module.exports = function(mongoose, request, modelGenerator) {
       else fn(null, {}, page.html);
     });
   };
+
+  requestCache.invalidate = function(url, fn) {
+    models.Page.findOne({url: url}).remove(fn);
+  };
+
+  return requestCache;
 };
+

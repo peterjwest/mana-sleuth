@@ -15,6 +15,11 @@ module.exports = function(request, cheerio, util) {
           if (!$("title").text().match(/temporarily\s+unavailable/i)) {
             return success($);
           }
+          if (request.invalidate) {
+            return request.invalidate(url, function() {
+              if (tries < threshold) attempt();
+            });
+          }
         }
         if (tries < threshold) attempt();
         else console.log("Error: Cannot access site");
