@@ -10,17 +10,23 @@ module.exports = function(request, cheerio, util) {
     var attempt = function() {
       tries++;
       request({url: url}, function (error, response, html) {
+
+        // Checks the response is valid
         if (html) {
           var $ = cheerio.load(html);
           if (!$("title").text().match(/temporarily\s+unavailable/i)) {
             return success($);
           }
-          if (request.invalidate) {
-            return request.invalidate(url, function() {
-              if (tries < threshold) attempt();
-            });
-          }
         }
+
+        // Request has failed so invalidate the cache
+        if (request.invalidate) {
+          return request.invalidate(url, function() {
+            if (tries < threshold) attempt();
+          });
+        }
+
+        // Tries again if within the threshold
         if (tries < threshold) attempt();
         else console.log("Error: Cannot access site");
       });
