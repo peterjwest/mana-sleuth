@@ -25,6 +25,15 @@ util.hash = function(array, fn) {
   return obj;
 };
 
+// Produces an array from an object
+util.dehash = function(obj, fn) {
+  var array = [];
+  for (key in obj) {
+    array.push(fn(obj[key], key));
+  };
+  return array;
+};
+
 // Combines two arrays into an object as key-value pairs
 util.zip = function(array, keys) {
   var obj = {};
@@ -76,3 +85,11 @@ util.round = function(num, precision) {
   var multiple = Math.pow(10, precision);
   return Math.round(num * multiple) / multiple;
 };
+
+// Clear way to cast to values
+util.cast = function(type, value) {
+  if (type == "boolean") return !!value;
+  if (type == "string") return value+"";
+  if (type == "integer") return parseInt(value);
+  if (type == "float") return parseFloat(value);
+}
