@@ -49,26 +49,38 @@ var routes = {
 };
 
 var decodeUrl = function(req, res, next) {
-  req.route = req.params[0];
-  var paramNames = routes[req.route] || [];
+  req.route = {name: req.params[0] || ""};
   var params = (req.params[1] || "").split("/");
   var data = {};
 
-  paramNames.map(function(param, i) {
-    data[param] = params[i];
+  (routes[req.route.name] || []).map(function(arg, i) {
+    if (params[i]) data[arg] = params[i];
   });
 
-  req.query = util.merge(data, req.query);
+  req.route.data = util.merge(req.query, data);
+
+
   next();
 };
 
-var encodeUrl = function(req, res) {
-  var paramNames = routes[req.route] || [];
-  var url = '/'+req.route;
-  paramNames.map(function(param) {
-    if (req.query[param]) url += '/'+req.query[param];
+var encodeUrl = function(route) {
+  var url = '/'+route.name;
+  (routes[route.route] || []).map(function(arg) {
+    if (route.data[arg]) {
+      url += '/'+route.data[arg];
+      delete route.data[arg];
+    }
   });
+
+  var query = util.dehash(route.data, function(value, name) { return name+"="+util.cast("string", value).replace(/\s/g, "+"); }).join("&");
+  if (query) url += "?" + query;
+
   return url;
+};
+
+util.url = function(route, params) {
+  var data = util.merge(route.data, params);
+  return encodeUrl(route, data);
 };
 
 var handleXhr = function(req, res, next) {
@@ -78,8 +90,6 @@ var handleXhr = function(req, res, next) {
 };
 
 server.get(/^(?:\/|\/(cards)\/?(.*))$/, decodeUrl, handleXhr, function(req, res) {
-  console.log(req.route, req.query);
-  console.log(encodeUrl(req, res));
   req.query.page = req.query.page || 1;
   app.cards.search(req.query).then(function(cards, total) {
 
@@ -107,7 +117,7 @@ server.get(/^(?:\/|\/(cards)\/?(.*))$/, decodeUrl, handleXhr, function(req, res)
       categories: app.categories,
       router: app.router,
       util: util,
-      request: req
+      request: req,
     });
   });
 });
@@ -117,22 +127,3 @@ server.listen(3000);
 app.categories.update()
   .then(app.expansions.populate)
   .then(app.cards.update);
-
-util.url = function(pageUrl, params) {
-  var urlData = url.parse(pageUrl, true);
-  var query = urlData.query;
-  query = util.merge(query, params || {});
-
-  // Prevents the previous URL being used
-  delete urlData.search;
-
-  delete query.xhr;
-
-  for (key in query) {
-    var value = query[key];
-    if (value === undefined || value === null || value === false) delete query[key];
-    else query[key] = (query[key] + "").replace(" ", "+");
-  };
-
-  return url.format(urlData);
-};
