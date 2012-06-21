@@ -37,6 +37,7 @@ module.exports = function(mongoose) {
     },
     complete: {type: Boolean, default: false}
   });
+  schemas.Card.index({'lastUpdated': 1, 'complete': 1});
   schemas.Card.index({'printings.gathererId': 1});
   schemas.Card.index({'printings.expansion': 1});
   schemas.Card.index({'legalities.format': 1});
@@ -118,7 +119,7 @@ module.exports = function(mongoose) {
   };
 
   schemas.Card.statics.lastUpdated = function(fn) {
-    var query = this.findOne({complete: false}).asc('lastUpdated');
+    var query = this.findOne({complete: false}).sort('lastUpdated', 1);
     return fn ? query.run(fn) : query;
   };
 
