@@ -202,7 +202,7 @@ corrections.replacements = {
     'Promo': {rarity: 'Special'}
   },
 
-  // Fixes for cards, predominantly in the unglued/unhinged set
+  // Fixes for cards, predominantly in the unglued/unhinged set and for tokens
   Card: {
     "B.F.M. (Big Furry Monster)": {
       subtypes: ["The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See"],
@@ -230,15 +230,33 @@ corrections.replacements = {
     "Little Girl": {
       cost: "{1/2W}"
     },
-    "Forest": { rules: [] },
-    "Mountain": { rules: [] },
-    "Swamp": { rules: [] },
-    "Plains": { rules: [] },
-    "Island": { rules: [] },
-    "Snow-Covered Forest": { rules: [] },
-    "Snow-Covered Mountain": { rules: [] },
-    "Snow-Covered Swamp": { rules: [] },
-    "Snow-Covered Plains": { rules: [] },
-    "Snow-Covered Island": { rules: [] }
+    "Forest": {rules: []},
+    "Mountain": {rules: []},
+    "Swamp": {rules: []},
+    "Plains": {rules: []},
+    "Island": {rules: []},
+    "Snow-Covered Forest": {rules: []},
+    "Snow-Covered Mountain": {rules: []},
+    "Snow-Covered Swamp": {rules: []},
+    "Snow-Covered Plains": {rules: []},
+    "Snow-Covered Island": {rules: []},
+    "Demon": {types: ["Token", "Creature"]},
+    "Spirit": {types: ["Token", "Creature"]},
+    "Thrull": {types: ["Token", "Creature"]},
+    "Elemental": {types: ["Token", "Creature"]},
+    "Goblin": {types: ["Token", "Creature"]},
+    "Beast": {types: ["Token", "Creature"]},
+    "Elephant": {types: ["Token", "Creature"]},
+    "Elemental Shaman": {types: ["Token", "Creature"]},
+    "Hornet": {types: ["Token", "Artifact", "Creature"]},
+    "Minion": {types: ["Token", "Creature"]},
+    "Saproling": {types: ["Token", "Creature"]},
+    "Elf Warrior": {types: ["Token", "Creature"]},
+    "Soldier token card": {/*name: "Soldier",*/ types: ["Token", "Creature"], subtypes: ["Soldier"]},
+    "Zombie token card": {/*name: "Zombie",*/ types: ["Token", "Creature"], subtypes: ["Zombie"]},
+    "Pegasus token card": {/*name: "Pegasus",*/ types: ["Token", "Creature"], subtypes: ["Pegasus"]},
+    "Sheep token card": {/*name: "Sheep",*/ types: ["Token", "Creature"], subtypes: ["Sheep"]},
+    "Squirrel token card": {/*name: "Squirrel",*/ types: ["Token", "Creature"], subtypes: ["Squirrel"]},
+    "Goblin token card": {/*name: "Goblin",*/ types: ["Token", "Creature"], subtypes: ["Goblin"]}
   }
 };
