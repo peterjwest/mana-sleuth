@@ -3,7 +3,7 @@ module.exports = function(mongoose, request, modelGenerator) {
 
   var schemas = {
     Page: new mongoose.Schema({
-      url: String,
+      url: {type: String, index: true, unique: true},
       html: String
     })
   };

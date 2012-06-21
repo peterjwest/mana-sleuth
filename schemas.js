@@ -3,7 +3,7 @@ module.exports = function(mongoose) {
   var schemas = {};
 
   schemas.Printing = new Schema({
-    gathererId: Number,
+    gathererId: {type: Number, index: true},
     expansion: Schema.ObjectId,
     rarity: Schema.ObjectId,
     artist: String
@@ -15,20 +15,20 @@ module.exports = function(mongoose) {
   });
 
   schemas.Card = new Schema({
-    name: String,
+    name: {type: String, index: true},
     power: {type: String, match: /^\d*|\*$/},
     toughness: {type: String, match: /^\d*|\*$/},
     loyalty: Number,
     cost: String,
     cmc: Number,
-    colours: [Schema.ObjectId],
+    colours: {type: [Schema.ObjectId], index: true},
     colourCount: Number,
     rules: [String],
     lastUpdated: Date,
     flavourText: String,
     watermark: String,
-    types: [Schema.ObjectId],
-    subtypes: [Schema.ObjectId],
+    types: {type: [Schema.ObjectId], index: true},
+    subtypes: {type: [Schema.ObjectId], index: true},
     printings: [schemas.Printing],
     legalities: [schemas.Legality],
     multipart: {
@@ -37,51 +37,54 @@ module.exports = function(mongoose) {
     },
     complete: {type: Boolean, default: false}
   });
+  schemas.Card.index({'printings.gathererId': 1});
+  schemas.Card.index({'printings.expansion': 1});
+  schemas.Card.index({'legalities.format': 1});
 
   schemas.Expansion = new Schema({
-    name: String,
-    gathererName: String,
+    name: {type: String, index: true, unique: true},
+    gathererName: {type: String, index: true, unique: true},
     released: Date,
     complete: {type: Boolean, default: false},
     populated: {type: Boolean, default: false}
   });
 
   schemas.Format = new Schema({
-    name: String,
-    gathererName: String,
-    priority: {type: Number, default: 0},
+    name: {type: String, index: true, unique: true},
+    gathererName: {type: String, index: true, unique: true},
+    priority: {type: Number, default: 0}
   });
 
   schemas.Block = new Schema({
-    name: String,
-    gathererName: String,
+    name: {type: String, index: true, unique: true},
+    gathererName: {type: String, index: true, unique: true},
     expansions: [Schema.ObjectId]
   });
 
   schemas.Colour = new Schema({
-    name: String,
-    gathererName: String,
+    name: {type: String, index: true, unique: true},
+    gathererName: {type: String, index: true, unique: true}
   });
 
   schemas.Type = new Schema({
-    name: String,
-    gathererName: String,
+    name: {type: String, index: true, unique: true},
+    gathererName: {type: String, index: true, unique: true},
     genuine: {type: Boolean, default: true}
   });
 
   schemas.Subtype = new Schema({
-    name: String,
-    gathererName: String,
+    name: {type: String, index: true, unique: true},
+    gathererName: {type: String, index: true, unique: true},
     genuine: {type: Boolean, default: true}
   });
 
   schemas.Rarity = new Schema({
-    name: String,
-    gathererName: String,
+    name: {type: String, index: true, unique: true},
+    gathererName: {type: String, index: true, unique: true},
   });
 
   schemas.Cache = new Schema({
-    name: String,
+    name: {type: String, index: true, unique: true},
     value: {}
   });
 
