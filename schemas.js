@@ -11,7 +11,7 @@ module.exports = function(mongoose) {
 
   schemas.CardFormat = new Schema({
     format: Schema.ObjectId,
-    legality: String
+    legality: Schema.ObjectId
   });
 
   schemas.Card = new Schema({

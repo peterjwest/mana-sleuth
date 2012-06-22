@@ -206,6 +206,7 @@ module.exports = function(app, async, util) {
       }
 
       if (query) {
+
         // Splits the search query into terms, splitting quoted and non quoted words
         var tokens = query.match(/[^"]+|["]/g);
         var quote = false;
@@ -269,6 +270,7 @@ module.exports = function(app, async, util) {
         types: 'types',
         subtypes: 'subtypes',
         formats: 'formats.format',
+        legalities: 'formats.legality',
         expansions: 'printings.expansion',
         rarities: 'printings.rarity'
       };
