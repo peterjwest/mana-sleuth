@@ -32,6 +32,11 @@ corrections.additions = {
     {name: "Ship", genuine: false},
     {name: "Mummy", genuine: false},
     {name: "Gus", genuine: false}
+  ],
+  Legality: [
+    {name: "Legal"},
+    {name: "Restricted"},
+    {name: "Banned"}
   ]
 };
 

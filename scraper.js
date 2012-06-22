@@ -56,7 +56,8 @@ module.exports = function(request, cheerio, util) {
         Block: find(/block/i),
         Type: find(/type/i, /subtype/i),
         Subtype: find(/subtype/i),
-        Rarity: find(/rarity/i)
+        Rarity: find(/rarity/i),
+        Legality: []
       });
     });
   };
@@ -170,10 +171,10 @@ module.exports = function(request, cheerio, util) {
         multipart.cards = [cards[0].name, util.alternate(names, cards[0].name)];
       }
 
-      // Get card legalities
-      scraper.getCardLegalities(urls.printings, function(legalities) {
+      // Get card foramts
+      scraper.getCardFormats(urls.printings, function(formats) {
         cards.map(function(card) {
-          card.legalities = legalities;
+          card.formats = formats;
         });
 
         details = null;
@@ -183,10 +184,10 @@ module.exports = function(request, cheerio, util) {
     });
   };
 
-  scraper.getCardLegalities = function(url, success) {
+  scraper.getCardFormats = function(url, success) {
     scraper.requestPage(url, function($) {
       var formats = $(".cardList:last");
-      var legalities = [];
+      var cardFormats = [];
 
       var formatFields = {};
       var i = 0;
@@ -201,7 +202,7 @@ module.exports = function(request, cheerio, util) {
           return $(row.children("td").toArray()[formatFields[col]]);
         };
 
-        legalities.push({
+        cardFormats.push({
           format: find("Format").text().replace(/^\s+|\s+$/g, ""),
           legality: find("Legality").text().replace(/^\s+|\s+$/g, "")
         });
@@ -209,7 +210,7 @@ module.exports = function(request, cheerio, util) {
 
       formats = null;
       $ = null;
-      success(legalities);
+      success(cardFormats);
     });
   };
 

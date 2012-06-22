@@ -1,6 +1,6 @@
 module.exports = function(app, async, util) {
   var categories = {data: {}};
-  categories.types = ['Colour', 'Type', 'Subtype', 'Expansion', 'Block', 'Format', 'Rarity'];
+  categories.types = ['Colour', 'Type', 'Subtype', 'Expansion', 'Block', 'Format', 'Rarity', 'Legality'];
 
   // Get card category collections from the database cache
   categories.get = function() {

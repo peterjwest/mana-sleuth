@@ -109,10 +109,12 @@ module.exports = function(app, async, util) {
           return app.categories.gathererName.subtypes[subtype];
         }).filter(function(subtype) { return subtype; });
 
-        card.legalities = card.legalities.filter(function(legality) {
-          var format = app.categories.gathererName.formats[legality.format];
-          legality.format = (format || {})._id;
-          return legality.format;
+        card.formats = card.formats.filter(function(cardFormat) {
+          var format = app.categories.gathererName.formats[cardFormat.format];
+          var legality = app.categories.gathererName.legalities[cardFormat.legality];
+          cardFormat.format = (format || {})._id;
+          cardFormat.legality = (legality || {})._id;
+          return cardFormat.format && cardFormat.legality;
         });
       });
 
@@ -141,6 +143,9 @@ module.exports = function(app, async, util) {
     })
 
     .then(function(errors) {
+      if (errors.filter(util.self).length) {
+        return console.log("Error: Couldn't save card ("+errors.join(", ")+")");
+      }
       console.log("Updated");
       this.success();
     });
@@ -263,7 +268,7 @@ module.exports = function(app, async, util) {
         colours: 'colours',
         types: 'types',
         subtypes: 'subtypes',
-        formats: 'legalities.format',
+        formats: 'formats.format',
         expansions: 'printings.expansion',
         rarities: 'printings.rarity'
       };

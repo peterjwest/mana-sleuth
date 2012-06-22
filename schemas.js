@@ -3,13 +3,13 @@ module.exports = function(mongoose) {
   var schemas = {};
 
   schemas.Printing = new Schema({
-    gathererId: {type: Number, index: true},
+    gathererId: Number,
     expansion: Schema.ObjectId,
     rarity: Schema.ObjectId,
     artist: String
   });
 
-  schemas.Legality = new Schema({
+  schemas.CardFormat = new Schema({
     format: Schema.ObjectId,
     legality: String
   });
@@ -30,7 +30,7 @@ module.exports = function(mongoose) {
     types: {type: [Schema.ObjectId], index: true},
     subtypes: {type: [Schema.ObjectId], index: true},
     printings: [schemas.Printing],
-    legalities: [schemas.Legality],
+    formats: [schemas.CardFormat],
     multipart: {
       card: Schema.ObjectId,
       type: {type: String, match: /^flip|split|transform|double$/}
@@ -40,7 +40,7 @@ module.exports = function(mongoose) {
   schemas.Card.index({'lastUpdated': 1, 'complete': 1});
   schemas.Card.index({'printings.gathererId': 1});
   schemas.Card.index({'printings.expansion': 1});
-  schemas.Card.index({'legalities.format': 1});
+  schemas.Card.index({'formats.format': 1});
 
   schemas.Expansion = new Schema({
     name: {type: String, index: true, unique: true},
@@ -82,6 +82,11 @@ module.exports = function(mongoose) {
   schemas.Rarity = new Schema({
     name: {type: String, index: true, unique: true},
     gathererName: {type: String, index: true, unique: true},
+  });
+
+  schemas.Legality = new Schema({
+    name: {type: String, index: true, unique: true},
+    gathererName: {type: String, index: true, unique: true}
   });
 
   schemas.Cache = new Schema({
