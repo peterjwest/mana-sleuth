@@ -11,22 +11,22 @@ var async = require('./util/async.js');
 var scheduler = require('./util/scheduler.js');
 var util = require('./util/util.js');
 var modelGenerator = require('./util/model_generator.js');
-var memoryTracker = require('./util/memory_tracker.js');
-var pager = require('./pager.js');
+var cacheConnection = mongoose.createConnection('mongodb://localhost/gatherer');
+var requestCache = require('./util/request_cache.js')(cacheConnection, request, modelGenerator);
 
 // App modules
 var app = {};
-app.router = require('./router.js');
-app.schemas = require('./schemas.js')(mongoose);
+app.router = require('./app/router.js');
+app.schemas = require('./app/schemas.js')(mongoose);
 app.models = modelGenerator(connection, app.schemas);
-var requestCache = require('./requestCache.js')(mongoose, request, modelGenerator);
-app.scraper = require('./scraper.js')(requestCache, cheerio, util);
-app.corrections = require('./corrections.js');
-app.categories = require('./categories.js')(app, async, util);
-app.expansions = require('./expansions.js')(app, async, util);
-app.cards = require('./cards.js')(app, async, util);
+app.scraper = require('./app/scraper.js')(requestCache, cheerio, util);
+app.corrections = require('./app/corrections.js');
+app.categories = require('./app/categories.js')(app, async, util);
+app.expansions = require('./app/expansions.js')(app, async, util);
+app.cards = require('./app/cards.js')(app, async, util);
+app.search = require('./app/search.js')(app, async, util);
+app.pager = require('./app/pager.js');
 
-memoryTracker.update();
 
 var express = require('express');
 var less = require('connect-lesscss');
@@ -91,7 +91,7 @@ var handleXhr = function(req, res, next) {
 
 server.get(/^(?:\/|\/(cards)\/?(.*))$/, decodeUrl, handleXhr, function(req, res) {
   req.query.page = req.query.page || 1;
-  app.cards.search(req.query).then(function(cards, total) {
+  app.search.run(req.query).then(function(cards, total) {
 
     // Maps through cards, ading in references and sorting expansions
     if (cards) {
