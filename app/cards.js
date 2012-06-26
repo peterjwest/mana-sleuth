@@ -35,12 +35,7 @@ module.exports = function(app, async, util) {
       if (card) {
         console.log("Updating "+card.name);
         self.cards.push(card);
-        var urls = {
-          details: app.router.card(card.gathererId()),
-          printings: app.router.printings(card.gathererId())
-        };
-
-        app.scraper.getCardDetails(urls, this.success);
+        app.gatherer.scraper.getCardDetails(card.gathererId(), this.success);
       }
       else { console.log("Updated all cards"); }
     })
@@ -64,11 +59,7 @@ module.exports = function(app, async, util) {
 
         var altCard = self.cards[0].name == self.details.cards[0].name ? self.cards[1] : self.cards[0];
         if (self.details.multipart.type == "split") {
-          var urls = {
-            details: app.router.card(card.gathererId(), altCard.name),
-            printings: app.router.printings(card.gathererId())
-          };
-          app.scraper.getCardDetails(urls, function(data) {
+          app.scraper.getCardDetails(card.gathererId(), function(data) {
             self.details.cards = self.details.cards.concat(data.cards);
             next.success();
           });

@@ -1,4 +1,6 @@
-module.exports = function(connection, request, modelGenerator) {
+module.exports = function(mongoose, request, modelGenerator, database) {
+  var connection = mongoose.createConnection('mongodb://localhost/gatherer');
+
   var schemas = {
     Page: new mongoose.Schema({
       url: {type: String, index: true, unique: true},

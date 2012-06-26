@@ -1,7 +1,5 @@
-module.exports = function(request, cheerio, util) {
+module.exports = function(router, request, cheerio, util) {
   var scraper = {};
-
-  scraper.onPageLoad = function() {};
 
   // Gets the response of page and gives it to the callback function
   scraper.requestPage = function(url, success) {
@@ -34,8 +32,8 @@ module.exports = function(request, cheerio, util) {
     attempt();
   };
 
-  scraper.getCategories = function(url, success) {
-    scraper.requestPage(url, function($) {
+  scraper.getCategories = function(success) {
+    scraper.requestPage(router.categories(), function($) {
       var conditions = $(".advancedSearchTable tr");
 
       var find = function(search, negativeSearch) {
@@ -62,8 +60,8 @@ module.exports = function(request, cheerio, util) {
     });
   };
 
-  scraper.getExpansionCards = function(url, success) {
-    scraper.requestPage(url, function($) {
+  scraper.getExpansionCards = function(expansion, success) {
+    scraper.requestPage(app.router.cards(expansion), function($) {
       var cards = {};
       $(".cardItem").each(function() {
         var $card = $(this);
@@ -96,8 +94,8 @@ module.exports = function(request, cheerio, util) {
     });
   };
 
-  scraper.getCardDetails = function(urls, success) {
-    scraper.requestPage(urls.details, function($) {
+  scraper.getCardDetails = function(id, success) {
+    scraper.requestPage(router.card(id), function($) {
       var cards = [];
       var multipart = false;
       var details = $(".cardDetails");
@@ -172,7 +170,7 @@ module.exports = function(request, cheerio, util) {
       }
 
       // Get card foramts
-      scraper.getCardFormats(urls.printings, function(formats) {
+      scraper.getCardFormats(id, function(formats) {
         cards.map(function(card) {
           card.formats = formats;
         });
@@ -184,8 +182,8 @@ module.exports = function(request, cheerio, util) {
     });
   };
 
-  scraper.getCardFormats = function(url, success) {
-    scraper.requestPage(url, function($) {
+  scraper.getCardFormats = function(id, success) {
+    scraper.requestPage(router.printings(id), function($) {
       var formats = $(".cardList:last");
       var cardFormats = [];
 

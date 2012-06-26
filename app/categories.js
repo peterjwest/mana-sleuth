@@ -46,7 +46,7 @@ module.exports = function(app, async, util) {
 
     // Gets category names from the scraper
     return async.promise(function() {
-      app.scraper.getCategories(app.router.categories(), this.success);
+      app.gatherer.scraper.getCategories(this.success);
     })
 
     // Iterates through different models and saves them

@@ -1,32 +1,43 @@
-var router = exports;
+module.exports = function(util) {
+  var router = {};
 
-router.domain = 'http://gatherer.wizards.com';
-router.paths = {
-  advanced: '/Pages/Advanced.aspx?',
-  cards: '/Pages/Search/Default.aspx?',
-  details: '/Pages/Card/Details.aspx?',
-  original: '/Pages/Card/Details.aspx?printed=true&',
-  printings: '/Pages/Card/Printings.aspx?',
-  image: '/Handlers/Image.ashx?'
-};
+  router.routes = {
+    cards: ['query', 'page']
+  };
 
-router.cards = function(expansion) {
-  var params = 'output=checklist&set=|['+encodeURIComponent('"'+expansion+'"')+']';
-  return router.domain + router.paths.cards+params;
-};
+  router.decode = function(req, res, next) {
+    req.route = {name: req.params[0] || ""};
+    var params = (req.params[1] || "").split("/");
+    var data = {};
 
-router.card = function(id, part) {
-  return router.domain + router.paths['details'] + 'multiverseid=' + id + (part ? '&part='+part : '');
-};
+    (router.routes[req.route.name] || []).map(function(arg, i) {
+      if (params[i]) data[arg] = params[i];
+    });
 
-router.printings = function(id) {
-  return router.domain + router.paths['printings'] + 'multiverseid=' + id;
-};
+    req.route.data = util.merge(req.query, data);
 
-router.image = function(id, part) {
-  return router.domain + router.paths['image'] + 'type=card&multiverseid=' + id + (part ? '&part='+part : '');
-};
+    next();
+  };
 
-router.categories = function() {
-  return router.domain + router.paths.advanced;
+  router.encode = function(route) {
+    var url = '/'+route.name;
+    (router.routes[route.route] || []).map(function(arg) {
+      if (route.data[arg]) {
+        url += '/'+route.data[arg];
+        delete route.data[arg];
+      }
+    });
+
+    var query = util.dehash(route.data, function(value, name) { return name+"="+util.cast("string", value).replace(/\s/g, "+"); }).join("&");
+    if (query) url += "?" + query;
+
+    return url;
+  };
+
+  router.url = function(route, params) {
+    var data = util.merge(route.data, params);
+    return router.encode(route, data);
+  };
+
+  return router;
 };

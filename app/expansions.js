@@ -22,7 +22,7 @@ module.exports = function(app, async, util) {
     var count = {updated: 0, created: 0};
 
     return async.promise(function() {
-      app.scraper.getExpansionCards(app.router.cards(expansion.name), this.success);
+      app.gatherer.scraper.getExpansionCards(expansion.name, this.success);
     })
 
     // Iterate through each card

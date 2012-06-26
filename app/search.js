@@ -56,7 +56,6 @@ module.exports = function(app, async, util) {
       }
 
       if (query) {
-
         // Splits the search query into terms, splitting quoted and non quoted words
         var tokens = query.match(/[^"]+|["]/g);
         var quote = false;
@@ -115,7 +114,7 @@ module.exports = function(app, async, util) {
         }).reduce(function(a, b) { return a.concat(b); }, []);
       }
 
-      var mongoAttrs = {
+      var attrs = {
         colours: 'colours',
         types: 'types',
         subtypes: 'subtypes',
@@ -124,6 +123,8 @@ module.exports = function(app, async, util) {
         expansions: 'printings.expansion',
         rarities: 'printings.rarity'
       };
+
+      console.log(terms);
 
       var criteria =  [];
       terms.map(function(term) {
@@ -136,13 +137,14 @@ module.exports = function(app, async, util) {
         }
         else {
           var obj = {};
-          obj[mongoAttrs[term.type]] = term.obj._id;
+          obj[attrs[term.type]] = term.obj._id;
           criteria.push(obj);
         }
       });
 
       var conditions = criteria.length > 0 ? {'$and': criteria} : {};
-      app.models.Card.find(conditions).skip((params.page - 1) * 20).limit(20).sort('name', 1).run(function(err, cards) {
+      var query = app.models.Card.find(conditions).sort('name', 1);
+      query.limit(20).skip((params.page - 1) * 20).run(function(err, cards) {
         app.models.Card.count(conditions, function(err, total) {
           next.success(cards, total);
         });
