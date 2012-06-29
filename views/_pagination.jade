@@ -4,7 +4,7 @@ if pager.totalPages > 1
     for page in pager.pages
       - active = page.active ? "btn-primary" : ""
       - disabled = page.disabled ? "disabled" : ""
-      a.xhr.btn(href=app.router.url(request.route, {page: page.number}), class=active+" "+disabled)
+      a.xhr-click.btn(href=app.router.url(request.route, {page: page.number}), class=active+" "+disabled)
         if page.left
           i.icon-chevron-left
         if page.name
