@@ -49,7 +49,7 @@ var handleXhr = function(req, res, next) {
   next();
 };
 
-server.get(/^(?:\/|\/(cards)\/?(.*))$/, handleXhr, app.router.decode, function(req, res) {
+server.get(/^\/?(.*)$/, handleXhr, app.router.decode, function(req, res) {
   req.query.page = req.query.page || 1;
   app.search.run(req.query).then(function(cards, total) {
 
@@ -84,6 +84,6 @@ server.get(/^(?:\/|\/(cards)\/?(.*))$/, handleXhr, app.router.decode, function(r
 
 server.listen(3000);
 
-app.categories.update()
-  .then(app.expansions.populate)
-  .then(app.cards.update);
+// app.categories.update()
+//   .then(app.expansions.populate)
+//   .then(app.cards.update);

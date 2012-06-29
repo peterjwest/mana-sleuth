@@ -2,7 +2,7 @@ module.exports = function(util) {
   var router = {};
 
   router.routes = {
-    cards: ['query', 'page']
+    '': ['query', 'page']
   };
 
   router.decode = function(req, res, next) {
