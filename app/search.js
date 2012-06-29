@@ -52,66 +52,79 @@ module.exports = function(app, async, util) {
             if (strength[1] !== '') criteria['toughness'] = strength[1];
             return criteria;
           }
+        },
+        formatless: {
+          criteria: function() {
+            return {withinFormatOnly: false};
+          }
         }
       }
 
-      if (query) {
-        // Splits the search query into terms, splitting quoted and non quoted words
-        var tokens = query.match(/[^"]+|["]/g);
-        var quote = false;
-        tokens.map(trim).filter(util.self).map(function(token) {
-          if (token === quote) quote = false;
-          else if (token.match("\"")) quote = token;
-          else {
-            if (quote) terms.push({type: 'rules', term: token});
-            else terms.push({type: 'words', words: token.split(" ")});
-          }
-        });
+      // Splits the search query into terms, splitting quoted and non quoted words
+      var tokens = query ? query.match(/[^"]+|["]/g) : [];
 
-        // Detects category keywords for non quoted terms
-        terms = terms.map(function(term) {
-          var subterms = [];
-          var subterm, length, categoryItem, value;
-          var match = false, keyword = false, search;
+      var quote = false;
+      tokens.map(trim).filter(util.self).map(function(token) {
+        if (token === quote) quote = false;
+        else if (token.match("\"")) quote = token;
+        else {
+          if (quote) terms.push({type: 'rules', term: token});
+          else terms.push({type: 'words', words: token.split(" ")});
+        }
+      });
 
-          if (term.type !== 'words') return [term];
+      // Detects category keywords for non quoted terms
+      terms = terms.map(function(term) {
+        var subterms = [];
+        var subterm, length, categoryItem, value;
+        var match = false, keyword = false, search;
 
-          while(term.words.length > 0) {
-            match = false;
+        if (term.type !== 'words') return [term];
 
-            for (length = term.words.length; length > 0; length--) {
-              subterm = term.words.slice(0, length);
-              for (category in app.categories.id) {
-                for (i in app.categories.id[category]) {
-                  categoryItem = app.categories.id[category][i];
-                  value = subterm.join(" ");
-                  keyword = false;
-                  for (word in keywords) {
-                    search = value.match(keywords[word].pattern);
-                    if (search) {
-                      match = {
-                        type: 'keyword', keyword: word,
-                        match: search
-                      };
-                    }
-                  };
-                  if (!match && normalise(value) == normalise(categoryItem.name || "")) {
-                    match = {type: category, obj: categoryItem};
+        while(term.words.length > 0) {
+          match = false;
+
+          for (length = term.words.length; length > 0; length--) {
+            subterm = term.words.slice(0, length);
+            for (category in app.categories.id) {
+              for (i in app.categories.id[category]) {
+                categoryItem = app.categories.id[category][i];
+                value = subterm.join(" ");
+                keyword = false;
+                for (word in keywords) {
+                  search = keywords[word].pattern && value.match(keywords[word].pattern);
+                  if (search) {
+                    match = {
+                      type: 'keyword', keyword: word,
+                      match: search
+                    };
                   }
+                };
+                if (!match && normalise(value) == normalise(categoryItem.name || "")) {
+                  match = {type: category, obj: categoryItem};
                 }
               }
-              if (match) break;
             }
-            if (match) subterms.push(match);
-            else {
-              subterms.push({type: 'rules', term: term.words[0]});
-              length = 1;
-            }
-
-            term.words = term.words.slice(length);
+            if (match) break;
           }
-          return subterms;
-        }).reduce(function(a, b) { return a.concat(b); }, []);
+          if (match) subterms.push(match);
+          else {
+            subterms.push({type: 'rules', term: term.words[0]});
+            length = 1;
+          }
+
+          term.words = term.words.slice(length);
+        }
+        return subterms;
+      }).reduce(function(a, b) { return a.concat(b); }, []);
+
+      if (params.format) {
+        var format = app.categories.name.formats[params.format];
+        if (format) terms.push({type: 'formats', obj: format});
+      }
+
+      if (terms.filter(function(term) { return term.type == 'formats'; }).length == 0) {
+        terms.push({type: 'keyword', keyword: 'formatless'});
       }
 
       var attrs = {
@@ -123,8 +136,6 @@ module.exports = function(app, async, util) {
         expansions: 'printings.expansion',
         rarities: 'printings.rarity'
       };
-
-      console.log(terms);
 
       var criteria =  [];
       terms.map(function(term) {
@@ -142,8 +153,10 @@ module.exports = function(app, async, util) {
         }
       });
 
+      console.log(criteria);
+
       var conditions = criteria.length > 0 ? {'$and': criteria} : {};
-      var query = app.models.Card.find(conditions).sort('name', 1);
+      var query = app.models.Card.find(conditions).sort('formats.format', 1);
       query.limit(20).skip((params.page - 1) * 20).run(function(err, cards) {
         app.models.Card.count(conditions, function(err, total) {
           next.success(cards, total);
