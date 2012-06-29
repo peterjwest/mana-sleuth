@@ -153,8 +153,6 @@ module.exports = function(app, async, util) {
         }
       });
 
-      console.log(criteria);
-
       var conditions = criteria.length > 0 ? {'$and': criteria} : {};
       var query = app.models.Card.find(conditions).sort('formats.format', 1);
       query.limit(20).skip((params.page - 1) * 20).run(function(err, cards) {
