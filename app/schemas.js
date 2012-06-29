@@ -35,7 +35,8 @@ module.exports = function(mongoose) {
       card: Schema.ObjectId,
       type: {type: String, match: /^flip|split|transform|double$/}
     },
-    complete: {type: Boolean, default: false}
+    complete: {type: Boolean, default: false},
+    withinFormatOnly: Boolean
   });
   schemas.Card.index({'lastUpdated': 1, 'complete': 1});
   schemas.Card.index({'printings.gathererId': 1});
