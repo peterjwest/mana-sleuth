@@ -33,7 +33,7 @@ module.exports = function(mongoose) {
     formats: [schemas.CardFormat],
     multipart: {
       card: Schema.ObjectId,
-      type: {type: String, match: /^flip|split|transform|double$/}
+      type: {type: String, match: /^flip|split|transform|double|partner$/}
     },
     complete: {type: Boolean, default: false},
     withinFormatOnly: Boolean

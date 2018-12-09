@@ -171,6 +171,7 @@ module.exports = function(router, request, cheerio, util) {
         var rules = find(details.find(".rightCol .row"), /text|rules/i).text();
         if (rules.match(/transform/i)) multipart.type = 'transform';
         if (rules.match(/flip/i)) multipart.type = 'flip';
+        if (rules.match(/partner/i)) multipart.type = 'partner';
         multipart.cards = cards.map(util.key('name'));
       }
 
