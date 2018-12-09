@@ -6,10 +6,11 @@ var url = require('url');
 var http = require('http');
 var express = require('express');
 var less = require('connect-lesscss');
-var server = express.createServer();
+var server = express();
 var cheerio = require("cheerio");
 var mongoose = require('mongoose');
 var connection = mongoose.createConnection(config.databases.app);
+var bodyParser = require('body-parser');
 
 // Util modules
 var async = require('./util/async.js');
@@ -31,17 +32,11 @@ app.search = require('./app/search.js')(app, async, util);
 app.pager = require('./app/pager.js');
 app.gatherer = require('./app/gatherer/gatherer.js')(cachedRequest, cheerio, util);
 
-server.configure(function() {
-  server.set('views', __dirname + '/views');
-  server.set('view engine', 'jade');
-  server.use(express.static(__dirname + '/public'));
-  server.use(express.bodyParser());
-  server.use("/css/styles.css", less("public/less/styles.less", {paths: ["public/less"]}));
-});
-
-server.configure('development', function() {
-  server.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
-});
+server.set('views', __dirname + '/views');
+server.set('view engine', 'pug');
+server.use(express.static(__dirname + '/public'));
+server.use(bodyParser());
+server.use("/css/styles.css", less("public/less/styles.less", {paths: ["public/less"]}));
 
 var handleXhr = function(req, res, next) {
   delete req.query.xhr
