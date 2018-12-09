@@ -18,7 +18,7 @@ module.exports = function(mongoose) {
     name: {type: String, index: true},
     power: {type: String, match: /^\d*|\*$/},
     toughness: {type: String, match: /^\d*|\*$/},
-    loyalty: Number,
+    loyalty: String,
     cost: String,
     cmc: Number,
     colours: {type: [Schema.ObjectId], index: true},
