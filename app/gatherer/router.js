@@ -10,8 +10,8 @@ router.paths = {
   image: '/Handlers/Image.ashx?'
 };
 
-router.cards = function(expansion) {
-  var params = 'output=checklist&set=|['+encodeURIComponent('"'+expansion+'"')+']';
+router.cards = function(expansion, page) {
+  var params = 'page=' + (page - 1) + '&action=advanced&output=checklist&set=|['+encodeURIComponent('"'+expansion+'"')+']';
   return router.domain + router.paths.cards+params;
 };
 

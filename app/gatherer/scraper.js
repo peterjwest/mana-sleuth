@@ -60,9 +60,12 @@ module.exports = function(router, request, cheerio, util) {
     });
   };
 
-  scraper.getExpansionCards = function(expansion, success) {
-    scraper.requestPage(app.router.cards(expansion), function($) {
-      var cards = {};
+  scraper.getExpansionCards = function(expansion, success, page, existingCards) {
+    if (existingCards === undefined) existingCards = {};
+    if (page === undefined) page = 1;
+    console.log("Requesting page " + page);
+    scraper.requestPage(router.cards(expansion, page), function($) {
+      var cards = existingCards;
       $(".cardItem").each(function() {
         var $card = $(this);
         var name = $card.find(".name").text();
@@ -90,7 +93,17 @@ module.exports = function(router, request, cheerio, util) {
           rarity: rarities[$card.find(".rarity").text()]
         });
       });
-      success(util.values(cards));
+
+      const hasNextPage = $('.pagingcontrols a')
+      .filter((index, element) => parseInt($(element).text(), 10) === page + 1)
+      .length > 0;
+
+      if (hasNextPage) {
+        scraper.getExpansionCards(expansion, success, page + 1, cards);
+      }
+      else {
+        success(util.values(cards));
+      }
     });
   };
 
