@@ -8,8 +8,8 @@
     "request": ">= 2.9.3",
     "mongoose": ">= 2.4.10",
     "cheerio": ">= 0.7.0",
-    "jade": ">= 0.26.0",
     "connect-lesscss": "0.2.0"
+    "pug": "^2.0.3",
   },
   "engine": "node >= 0.6.7"
 }

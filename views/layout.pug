@@ -14,7 +14,8 @@ html
             a.xhr-click(href='/')= title
             = " "
             small= subtitle
-      section#content!= body
+      section#content
+        block content
       footer
 
     script(src='/js/jquery.js')
