@@ -2,8 +2,6 @@ var config = require('./config.js');
 
 // Vendor modules
 var request = require('request');
-var url = require('url');
-var http = require('http');
 var express = require('express');
 var less = require('connect-lesscss');
 var server = express();
@@ -14,7 +12,6 @@ var bodyParser = require('body-parser');
 
 // Util modules
 var async = require('./util/async.js');
-var scheduler = require('./util/scheduler.js');
 var util = require('./util/util.js');
 var modelGenerator = require('./util/model_generator.js');
 var cachedRequest = require('./util/cached_request.js')(mongoose, request, modelGenerator, config.databases.cache);
