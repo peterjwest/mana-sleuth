@@ -45,7 +45,7 @@ server.get(/^\/?(.*)$/, handleXhr, app.router.decode, function(req, res) {
   req.query.page = req.query.page || 1;
   app.search.run(req.query).then(function(cards, total) {
 
-    // Maps through cards, ading in references and sorting expansions
+    // Maps through cards, adding in references and sorting expansions
     if (cards) {
       var expansions = app.categories.id.expansions;
       cards.map(function(card) {
