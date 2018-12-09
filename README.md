@@ -1,4 +1,4 @@
-#An MTG card search App
+# An MTG card search App
 
 This app is designed to provide awesome and quick Magic The Gathering card searching.
 It scrapes [gatherer](http://gatherer.wizards.com/Pages/Default.aspx), in order to populate a mongo database.
@@ -8,8 +8,13 @@ When you search, the site autodetects card names, colours, types, subtypes, expa
 It also supports keywords such as permanents, nonlands, noncreature, multicoloured and colorless cards
 Use quotes to search for specific rules.
 
-##TODO
+## TODO
 
+ - Finish updating dependencies
+ - Fix format query
+ - Fix subtype detection (un-sets)
+ - Add checkbox to exclude un-sets by default
+ - Rewrite front-end
  - Better handling of request and save failure
  - Save block/expansion relationships
  - Store images on S3
