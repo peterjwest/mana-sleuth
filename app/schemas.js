@@ -124,9 +124,8 @@ module.exports = function(mongoose) {
     return found;
   };
 
-  schemas.Card.statics.lastUpdated = function(fn) {
-    var query = this.findOne({complete: false}).sort('lastUpdated', 1);
-    return fn ? query.run(fn) : query;
+  schemas.Card.statics.lastUpdated = function() {
+    return this.findOne({complete: false}).sort('lastUpdated', 1);
   };
 
   return schemas;
