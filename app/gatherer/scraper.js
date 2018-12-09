@@ -184,7 +184,7 @@ module.exports = function(router, request, cheerio, util) {
 
   scraper.getCardFormats = function(id, success) {
     scraper.requestPage(router.printings(id), function($) {
-      var formats = $(".cardList:last");
+      var formats = $(".cardList").last();
       var cardFormats = [];
 
       var formatFields = {};

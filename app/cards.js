@@ -59,7 +59,7 @@ module.exports = function(app, async, util) {
 
         var altCard = self.cards[0].name == self.details.cards[0].name ? self.cards[1] : self.cards[0];
         if (self.details.multipart.type == "split") {
-          app.scraper.getCardDetails(card.gathererId(), function(data) {
+          app.gatherer.scraper.getCardDetails(card.gathererId(), function(data) {
             self.details.cards = self.details.cards.concat(data.cards);
             next.success();
           });
