@@ -13,7 +13,6 @@ module.exports = function(app) {
 
     // Update cards
     .then(function() {
-      var next = this;
       var run = function() {
         setTimeout(function() { cards.updateNext().then(run); }, 0);
       };
@@ -60,7 +59,6 @@ module.exports = function(app) {
         console.log("Updating "+card.name+" (multipart)");
         self.cards.push(card);
 
-        var altCard = self.cards[0].name == self.details.cards[0].name ? self.cards[1] : self.cards[0];
         if (self.details.multipart.type == "split") {
           app.gatherer.scraper.getCardDetails(card.gathererId(), function(data) {
             self.details.cards = self.details.cards.concat(data.cards);
