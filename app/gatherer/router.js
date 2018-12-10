@@ -1,4 +1,4 @@
-var router = exports;
+const router = exports;
 
 router.domain = 'http://gatherer.wizards.com';
 router.paths = {
@@ -11,7 +11,7 @@ router.paths = {
 };
 
 router.cards = function(expansion, page) {
-  var params = 'page=' + (page - 1) + '&action=advanced&output=checklist&set=|['+encodeURIComponent('"'+expansion+'"')+']';
+  const params = 'page=' + (page - 1) + '&action=advanced&output=checklist&set=|['+encodeURIComponent('"'+expansion+'"')+']';
   return router.domain + router.paths.cards+params;
 };
 

@@ -1,12 +1,14 @@
-module.exports = function(app, async, util) {
-  var expansions = {};
+const async = require('../util/async');
+
+module.exports = function(app) {
+  const expansions = {};
 
   // Iterates through new expansions and populates cards for them
   expansions.populate = function() {
     console.log("Populating unpopulated expansions");
 
     // Find expansions which haven't been marked as populated
-    var unpopulated = app.categories.data.expansions.filter(function(e) { return !e.populated; });
+    const unpopulated = app.categories.data.expansions.filter(function(e) { return !e.populated; });
     return async.map(unpopulated, function(expansion) {
       expansions.populateOne(expansion).then(this.success);
     })
@@ -19,7 +21,7 @@ module.exports = function(app, async, util) {
   // This uses the card search list view page to get basic details of cards in an expansion
   expansions.populateOne = function(expansion, success) {
     console.log("Finding cards for "+expansion.name);
-    var count = {updated: 0, created: 0};
+    const count = {updated: 0, created: 0};
 
     return async.promise(function() {
       app.gatherer.scraper.getExpansionCards(expansion.name, this.success);
@@ -27,7 +29,7 @@ module.exports = function(app, async, util) {
 
     // Iterate through each card
     .map(function(details) {
-      var next = this;
+      const next = this;
       app.models.Card.sync({name: details.name}, function(err, card) {
         count[card.unsaved ? 'created' : 'updated']++;
 

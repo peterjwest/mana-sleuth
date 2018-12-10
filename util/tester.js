@@ -5,7 +5,7 @@ tester.tests = {};
 
 tester.count = function(flag, value) {
   var count = 0;
-  for (i in tester.tests) if (tester.tests[i][flag] === value) count++;
+  for (const i in tester.tests) if (tester.tests[i][flag] === value) count++;
   return count;
 };
 
@@ -41,7 +41,7 @@ tester.print = function() {
   var test, result, message;
   tester.initialised = true;
   if (tester.count('completed', false) == 0) {
-    for (name in tester.tests) {
+    for (const name in tester.tests) {
       test = tester.tests[name];
       result = test.result;
       if (test.passed) message = "Passed: "+name;

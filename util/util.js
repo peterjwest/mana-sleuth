@@ -3,7 +3,7 @@ var util = exports;
 // Gets an array of all the properties of an object
 util.values = function(obj) {
   var key, array = [];
-  for (key in obj) {
+  for (const key in obj) {
     array.push(obj[key]);
   }
   return array;
@@ -12,7 +12,7 @@ util.values = function(obj) {
 // Gets an array of all the property names of an object
 util.keys = function(obj) {
   var key, array = [];
-  for (key in obj) {
+  for (const key in obj) {
     array.push(key);
   }
   return array;
@@ -28,7 +28,7 @@ util.hash = function(array, fn) {
 // Produces an array from an object
 util.dehash = function(obj, fn) {
   var array = [];
-  for (key in obj) {
+  for (const key in obj) {
     array.push(fn(obj[key], key));
   };
   return array;
@@ -51,14 +51,14 @@ util.pluck = function(array, key) {
 // Creates a shallow clone of an object
 util.clone = function(obj) {
   var next = {};
-  for (i in obj) next[i] = obj[i];
+  for (const i in obj) next[i] = obj[i];
   return next;
 };
 
 // Merges two objects, creating a default if neccessary
 util.merge = function(a, b) {
   a = a || {};
-  for (i in b) a[i] = b[i];
+  for (const i in b) a[i] = b[i];
   return a;
 };
 

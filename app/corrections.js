@@ -1,5 +1,5 @@
 // This file corrects incorrect or incomplete content from the gatherer database
-var corrections = exports;
+const corrections = {};
 
 // These are additions for categories (e.g. type, subtype) not included in the gatherer database
 corrections.additions = {
@@ -265,3 +265,5 @@ corrections.replacements = {
     "Goblin token card": {/*name: "Goblin",*/ types: ["Token", "Creature"], subtypes: ["Goblin"]}
   }
 };
+
+module.exports = corrections;

@@ -1,33 +1,28 @@
-var config = require('./config.js');
+const express = require('express');
+const less = require('connect-lesscss');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
 
-// Vendor modules
-var request = require('request');
-var express = require('express');
-var less = require('connect-lesscss');
-var server = express();
-var cheerio = require("cheerio");
-var mongoose = require('mongoose');
-var connection = mongoose.createConnection(config.databases.app);
-var bodyParser = require('body-parser');
+var config = require('./config');
+const util = require('./util/util');
+const modelGenerator = require('./util/model_generator');
 
-// Util modules
-var async = require('./util/async.js');
-var util = require('./util/util.js');
-var modelGenerator = require('./util/model_generator.js');
-var cachedRequest = require('./util/cached_request.js')(mongoose, request, modelGenerator, config.databases.cache);
-
-// App modules
-var app = {};
-app.router = require('./app/router.js')(util);
-app.schemas = require('./app/schemas.js')(mongoose);
+const connection = mongoose.createConnection(config.databases.app);
+const server = express();
+const app = {};
+app.schemas = require('./app/schemas');
 app.models = modelGenerator(connection, app.schemas);
-app.corrections = require('./app/corrections.js');
-app.categories = require('./app/categories.js')(app, async, util);
-app.expansions = require('./app/expansions.js')(app, async, util);
-app.cards = require('./app/cards.js')(app, async, util);
-app.search = require('./app/search.js')(app, async, util);
-app.pager = require('./app/pager.js');
-app.gatherer = require('./app/gatherer/gatherer.js')(cachedRequest, cheerio, util);
+app.router = require('./app/router');
+app.corrections = require('./app/corrections');
+app.categories = require('./app/categories')(app);
+app.expansions = require('./app/expansions')(app);
+app.cards = require('./app/cards')(app);
+app.search = require('./app/search')(app);
+app.pager = require('./app/pager');
+app.gatherer = {
+  router: require('./app/gatherer/router.js'),
+  scraper: require('./app/gatherer/scraper.js'),
+};
 
 server.set('views', __dirname + '/views');
 server.set('view engine', 'pug');
@@ -35,7 +30,7 @@ server.use(express.static(__dirname + '/public'));
 server.use(bodyParser());
 server.use("/css/styles.css", less("public/less/styles.less", {paths: ["public/less"]}));
 
-var handleXhr = function(req, res, next) {
+const handleXhr = function(req, res, next) {
   delete req.query.xhr
   req.xhr = req.headers['x-requested-with'] == 'XMLHttpRequest';
   next();

@@ -1,14 +1,17 @@
-module.exports = function(app, async, util) {
-  var categories = {data: {}};
+const async = require('../util/async');
+const util = require('../util/util');
+
+module.exports = function(app) {
+  const categories = {data: {}};
   categories.types = ['Colour', 'Type', 'Subtype', 'Expansion', 'Block', 'Format', 'Rarity', 'Legality'];
 
   // Get card category collections from the database cache
   categories.get = function() {
     return async.promise(function() {
-      var next = this;
+      const next = this;
       app.models.Cache.findOne({name: 'categories'}, function(err, cache) {
         categories.types.map(function(category) {
-          var model = app.models[category];
+          const model = app.models[category];
           categories.data[model.collectionName] = cache.value[model.collectionName];
         });
         categories.hash();
@@ -21,7 +24,7 @@ module.exports = function(app, async, util) {
   categories.cache = function() {
     console.log("Caching categories");
     return async.promise(function() {
-      var next = this;
+      const next = this;
       app.models.Cache.sync({name: 'categories'}, function(err, cache) {
         cache.set({name: 'categories', value: util.clone(categories.data)});
         cache.save(next.success);
@@ -31,10 +34,10 @@ module.exports = function(app, async, util) {
 
   // Puts all categories into hashes keyed by the given key
   categories.hash = function(keys) {
-    var keys = {name: "name", gathererName: "gathererName", _id: "id"};
-    for (key in keys) {
+    const keys = {name: "name", gathererName: "gathererName", _id: "id"};
+    for (const key in keys) {
       categories[keys[key]] = {};
-      for (category in categories.data) {
+      for (const category in categories.data) {
         categories[keys[key]][category] = util.hash(categories.data[category], util.key(key));
       }
     }
@@ -52,8 +55,8 @@ module.exports = function(app, async, util) {
     // Iterates through different models and saves them
     .then(function(data) {
       async.map(categories.types, function(category) {
-        var model = app.models[category];
-        var categoryData = data[category].map(function(name) { return {name: name}; });
+        const model = app.models[category];
+        let categoryData = data[category].map(function(name) { return {name: name}; });
         categoryData = categories.applyCorrections(categoryData, category);
         categoryData.map(function(item) {
           item.gathererName = item.name;
@@ -62,7 +65,7 @@ module.exports = function(app, async, util) {
         // Save categories
         categories.data[model.collectionName] = [];
         async.map(categoryData, function(details) {
-          var next = this;
+          const next = this;
 
           model.sync({gathererName: details.gathererName}, function(err, item) {
             categories.data[model.collectionName].push(item);
@@ -88,21 +91,20 @@ module.exports = function(app, async, util) {
 
   // Applies any neccessary corrections to a category
   categories.applyCorrections = function(data, category) {
-    var additions = app.corrections.additions[category];
-    var removals = app.corrections.removals[category];
-    var replacements = app.corrections.replacements[category];
+    const additions = app.corrections.additions[category];
+    const removals = app.corrections.removals[category];
+    const replacements = app.corrections.replacements[category];
 
     if (additions) data = additions.concat(data);
     if (removals) {
-      var removals = util.hash(removals, util.key('name'));
-      data = data.filter(function(item) { return !removals[item.name]; });
+      const removalHash = util.hash(removals, util.key('name'));
+      data = data.filter(function(item) { return !removalHash[item.name]; });
     }
     if (replacements) {
       data.map(function(item) {
-        var replacement = replacements[item.name];
+        const replacement = replacements[item.name];
         if (replacement) {
-
-          for (name in replacement) item[name] = replacement[name];
+          for (const name in replacement) item[name] = replacement[name];
         }
       });
     }

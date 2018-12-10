@@ -1,4 +1,7 @@
-module.exports = function(app, async, util) {
+const async = require('../util/async');
+const util = require('../util/util');
+
+module.exports = function(app) {
   var cards = {};
 
   // Loops through updating cards
