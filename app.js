@@ -42,7 +42,7 @@ server.get(/^\/?(.*)$/, handleXhr, app.router.decode, function(req, res) {
 
     // Maps through cards, adding in references and sorting expansions
     if (cards) {
-      var expansions = app.categories.id.expansions;
+      var expansions = app.categories.id.Expansion;
       cards.map(function(card) {
         card.printings = card.printings.sort(function(a,b) {
           return expansions[b.expansion].released - expansions[a.expansion].released;
@@ -52,7 +52,7 @@ server.get(/^\/?(.*)$/, handleXhr, app.router.decode, function(req, res) {
     }
 
     // Sorts formats by priority
-    var formats = app.categories.data.formats.sort(function(a, b) { return b.priority - a.priority; });
+    var formats = app.categories.data.Format.sort(function(a, b) { return b.priority - a.priority; });
 
     res.render('index', {
       layout: !req.xhr,

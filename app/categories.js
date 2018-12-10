@@ -12,7 +12,7 @@ module.exports = function(app) {
       app.models.Cache.findOne({name: 'categories'}, function(err, cache) {
         categories.types.map(function(category) {
           const model = app.models[category];
-          categories.data[model.collectionName] = cache.value[model.collectionName];
+          categories.data[model.modelName] = cache.value[model.modelName];
         });
         categories.hash();
         next.success();
@@ -63,12 +63,12 @@ module.exports = function(app) {
         });
 
         // Save categories
-        categories.data[model.collectionName] = [];
+        categories.data[model.modelName] = [];
         async.map(categoryData, function(details) {
           const next = this;
 
           model.sync({gathererName: details.gathererName}, function(err, item) {
-            categories.data[model.collectionName].push(item);
+            categories.data[model.modelName].push(item);
             item.set(details);
             item.save(next.success);
           });

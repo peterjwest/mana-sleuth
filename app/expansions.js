@@ -8,7 +8,7 @@ module.exports = function(app) {
     console.log("Crawling uncrawled expansions");
 
     // Find expansions which haven't been marked as crawled
-    const uncrawled = app.categories.data.expansions.filter(function(e) { return !e.crawled; });
+    const uncrawled = app.categories.data.Expansion.filter(function(e) { return !e.crawled; });
     return async.map(uncrawled, function(expansion) {
       expansions.populateOne(expansion).then(this.success);
     })
@@ -35,7 +35,7 @@ module.exports = function(app) {
 
         // Substitute colour references
         details.colours = details.colours.map(function(colour) {
-          return app.categories.gathererName.colours[colour];
+          return app.categories.gathererName.Colour[colour];
         }).filter(function(colour) { return colour; });
 
         // Populate printing
@@ -43,7 +43,7 @@ module.exports = function(app) {
           var replacement = app.corrections.replacements.Rarity[printing.rarity];
           if (replacement) printing.rarity = replacement.rarity;
 
-          printing.rarity = app.categories.gathererName.rarities[printing.rarity];
+          printing.rarity = app.categories.gathererName.Rarity[printing.rarity];
           printing.expansion = expansion._id;
           return printing;
         });

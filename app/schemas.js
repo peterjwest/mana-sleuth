@@ -3,6 +3,14 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const schemas = {};
 
+const fieldModelNames = {
+  Format: 'formats',
+  Printing: 'printings',
+  Subtype: 'subtypes',
+  Type: 'types',
+  Colour: 'colours',
+};
+
 schemas.Printing = new Schema({
   gathererId: Number,
   expansion: Schema.ObjectId,
@@ -103,29 +111,30 @@ schemas.Card.methods.gathererId = function() {
 schemas.Card.methods.objects = function(objects) {
   this.objects = {};
   if (objects) {
-    for (const key in objects) {
-      if (this[key]) {
-        this.objects[key] =  this[key].map(function(id) { return objects[key][id]; });
+    for (const modelName in objects) {
+      const fieldName = fieldModelNames[modelName];
+      if (fieldName) {
+        this.objects[fieldName] =  this[fieldName].map(function(id) { return objects[modelName][id]; });
       }
     }
   }
   return this.objects;
 };
 
-schemas.Card.methods.names = function(key) {
-  return this.objects[key].map(function(obj) { return obj.name; }).join(", ");
+schemas.Card.methods.names = function(fieldName) {
+  return this.objects[fieldName].map(function(obj) { return obj.name; }).join(", ");
 };
 
-schemas.Card.methods.has = function(key, name) {
+schemas.Card.methods.has = function(fieldName, name) {
   let found = false;
-  this.objects[key].map(function(obj) {
+  this.objects[fieldName].map(function(obj) {
     if (obj.name == name) found = true;
   });
   return found;
 };
 
 schemas.Card.statics.lastUpdated = function() {
-  return this.findOne({complete: false}).sort('lastUpdated', 1);
+  return this.findOne({complete: false}).sort({lastUpdated: 1});
 };
 
 module.exports = schemas;

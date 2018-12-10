@@ -1,5 +1,3 @@
-const utils = require('../node_modules/mongoose/lib/utils.js');
-
 module.exports = function(connection, schemas) {
 
   // Sync method for adding/updating models
@@ -15,10 +13,10 @@ module.exports = function(connection, schemas) {
 
   // Define models
   const models = {};
-  for (const i in schemas) {
-    models[i] = connection.model(i, schemas[i]);
-    models[i].sync = sync;
-    models[i].collectionName = utils.toCollectionName(i);
+  for (const name in schemas) {
+    models[name] = connection.model(name, schemas[name], name);
+    models[name].sync = sync;
+    models[name].modelName = name;
   }
 
   return models;

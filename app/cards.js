@@ -29,7 +29,7 @@ module.exports = function(app) {
     // Get the card last updated
     return async.promise(function() {
       var next = this;
-      app.models.Card.lastUpdated().run(function(err, card) { next.success(card) });
+      app.models.Card.lastUpdated().then(function(card) { next.success(card) });
     })
 
     // Scrape card details
@@ -94,16 +94,16 @@ module.exports = function(app) {
         if (replacement) applyReplacements(card, replacement);
 
         card.types = card.types.map(function(type) {
-          return app.categories.gathererName.types[type];
+          return app.categories.gathererName.Type[type];
         }).filter(function(type) { return type; });
 
         card.subtypes = card.subtypes.map(function(subtype) {
-          return app.categories.gathererName.subtypes[subtype];
+          return app.categories.gathererName.Subtype[subtype];
         }).filter(function(subtype) { return subtype; });
 
         card.formats = card.formats.filter(function(cardFormat) {
-          var format = app.categories.gathererName.formats[cardFormat.format];
-          var legality = app.categories.gathererName.legalities[cardFormat.legality];
+          var format = app.categories.gathererName.Format[cardFormat.format];
+          var legality = app.categories.gathererName.Legality[cardFormat.legality];
           cardFormat.format = (format || {})._id;
           cardFormat.legality = (legality || {})._id;
           return cardFormat.format && cardFormat.legality;

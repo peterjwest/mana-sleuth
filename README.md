@@ -10,7 +10,6 @@ Use quotes to search for specific rules.
 
 ## TODO
 
- - Finish updating dependencies
  - Fix subtype detection (un-sets)
  - Add checkbox to exclude un-sets by default
  - Rewrite front-end

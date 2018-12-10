@@ -26,9 +26,9 @@ module.exports = function(app) {
         non: {
           pattern: /^non-?([a-z]+)$/i,
           criteria: function(keyword) {
-            const colour = app.categories.name.colours[firstUpper(normalise(keyword[1]))];
-            const type = app.categories.name.types[firstUpper(normalise(keyword[1]))];
-            const subtype = app.categories.name.subtypes[firstUpper(normalise(keyword[1]))];
+            const colour = app.categories.name.Colour[firstUpper(normalise(keyword[1]))];
+            const type = app.categories.name.Type[firstUpper(normalise(keyword[1]))];
+            const subtype = app.categories.name.Subtype[firstUpper(normalise(keyword[1]))];
             if (colour) return {colours: {$nin: [colour._id]}};
             if (type) return {types: {$nin: [type._id]}};
             if (subtype) return {subtypes: {$nin: [subtype._id]}};
@@ -39,8 +39,8 @@ module.exports = function(app) {
           pattern: /^permanent$/i,
           criteria: function() {
             return {types: {$nin: [
-              app.categories.name.types['Instant']._id,
-              app.categories.name.types['Sorcery']._id
+              app.categories.name.Type['Instant']._id,
+              app.categories.name.Type['Sorcery']._id
             ]}}
           }
         },
@@ -49,7 +49,7 @@ module.exports = function(app) {
           criteria: function(keyword) {
             if (keyword === "/") return {};
             const strength = keyword.split("/");
-            const criteria = {types: app.categories.name.types['Creature']._id};
+            const criteria = {types: app.categories.name.Type['Creature']._id};
             if (strength[0] !== '') criteria['power'] = strength[0];
             if (strength[1] !== '') criteria['toughness'] = strength[1];
             return criteria;
@@ -115,21 +115,21 @@ module.exports = function(app) {
       }).reduce(function(a, b) { return a.concat(b); }, []);
 
       if (params.format) {
-        const format = app.categories.name.formats[params.format];
-        if (format) terms.push({type: 'formats', obj: format});
+        const format = app.categories.name.Format[params.format];
+        if (format) terms.push({type: 'Format', obj: format});
       }
 
       const attrs = {
-        colours: 'colours',
-        types: 'types',
-        subtypes: 'subtypes',
-        formats: 'formats.format',
-        legalities: 'formats.legality',
-        expansions: 'printings.expansion',
-        rarities: 'printings.rarity'
+        Colour: 'colours',
+        Type: 'types',
+        Subtype: 'subtypes',
+        Format: 'formats.format',
+        Legality: 'formats.legality',
+        Expansion: 'printings.expansion',
+        Rarity: 'printings.rarity'
       };
 
-      const criteria =  [];
+      const criteria = [];
       terms.map(function(term) {
         if (term.type === 'rules') {
           const match = new RegExp("\\b"+util.regEscape(term.term)+"\\b", "i");
@@ -144,8 +144,8 @@ module.exports = function(app) {
       });
 
       const conditions = criteria.length > 0 ? {'$and': criteria} : {};
-      const query = app.models.Card.find(conditions).sort('formats.format', 1);
-      query.limit(20).skip((params.page - 1) * 20).run(function(err, cards) {
+      const query = app.models.Card.find(conditions).sort({'formats.format': 1});
+      query.limit(20).skip((params.page - 1) * 20).then(function(cards) {
         app.models.Card.count(conditions, function(err, total) {
           next.success(cards, total);
         });
