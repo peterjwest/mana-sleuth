@@ -36,8 +36,7 @@ schemas.Card = new Schema({
     card: Schema.ObjectId,
     type: {type: String, match: /^flip|split|transform|double|partner|meld$/}
   },
-  complete: {type: Boolean, default: false},
-  withinFormatOnly: Boolean
+  complete: {type: Boolean, default: false}
 });
 schemas.Card.index({'lastUpdated': 1, 'complete': 1});
 schemas.Card.index({'printings.gathererId': 1});

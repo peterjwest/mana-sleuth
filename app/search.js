@@ -55,11 +55,6 @@ module.exports = function(app) {
             return criteria;
           }
         },
-        formatless: {
-          criteria: function() {
-            return {withinFormatOnly: false};
-          }
-        }
       }
 
       // Splits the search query into terms, splitting quoted and non quoted words
@@ -122,10 +117,6 @@ module.exports = function(app) {
       if (params.format) {
         const format = app.categories.name.formats[params.format];
         if (format) terms.push({type: 'formats', obj: format});
-      }
-
-      if (terms.filter(function(term) { return term.type == 'formats'; }).length == 0) {
-        terms.push({type: 'keyword', keyword: 'formatless'});
       }
 
       const attrs = {
