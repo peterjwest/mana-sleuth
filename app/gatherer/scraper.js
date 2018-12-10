@@ -177,6 +177,7 @@ scraper.getCardDetails = function(id, success) {
       if (rules.match(/transform/i)) multipart.type = 'transform';
       if (rules.match(/flip/i)) multipart.type = 'flip';
       if (rules.match(/partner/i)) multipart.type = 'partner';
+      if (rules.match(/meld/i)) multipart.type = 'meld';
       multipart.cards = cards.map(util.key('name'));
     }
 

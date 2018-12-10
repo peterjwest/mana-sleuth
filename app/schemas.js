@@ -34,7 +34,7 @@ schemas.Card = new Schema({
   formats: [schemas.CardFormat],
   multipart: {
     card: Schema.ObjectId,
-    type: {type: String, match: /^flip|split|transform|double|partner$/}
+    type: {type: String, match: /^flip|split|transform|double|partner|meld$/}
   },
   complete: {type: Boolean, default: false},
   withinFormatOnly: Boolean
