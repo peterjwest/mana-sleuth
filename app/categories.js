@@ -33,7 +33,7 @@ module.exports = function(app) {
   };
 
   // Puts all categories into hashes keyed by the given key
-  categories.hash = function(keys) {
+  categories.hash = function() {
     const keys = {name: "name", gathererName: "gathererName", _id: "id"};
     for (const key in keys) {
       categories[keys[key]] = {};
