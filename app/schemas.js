@@ -48,7 +48,7 @@ schemas.Expansion = new Schema({
   gathererName: {type: String, index: true, unique: true},
   released: Date,
   complete: {type: Boolean, default: false},
-  populated: {type: Boolean, default: false}
+  crawled: {type: Boolean, default: false}
 });
 
 schemas.Format = new Schema({

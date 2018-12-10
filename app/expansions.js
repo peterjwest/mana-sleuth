@@ -5,15 +5,15 @@ module.exports = function(app) {
 
   // Iterates through new expansions and populates cards for them
   expansions.populate = function() {
-    console.log("Populating unpopulated expansions");
+    console.log("Crawling uncrawled expansions");
 
-    // Find expansions which haven't been marked as populated
-    const unpopulated = app.categories.data.expansions.filter(function(e) { return !e.populated; });
-    return async.map(unpopulated, function(expansion) {
+    // Find expansions which haven't been marked as crawled
+    const uncrawled = app.categories.data.expansions.filter(function(e) { return !e.crawled; });
+    return async.map(uncrawled, function(expansion) {
       expansions.populateOne(expansion).then(this.success);
     })
     .then(function() {
-      console.log("Populated all expansions");
+      console.log("Crawled all expansions");
       this.success();
     });
   };
@@ -58,8 +58,8 @@ module.exports = function(app) {
     .then(function() {
       console.log("Created "+count.created+" cards, updated "+count.updated+" cards");
 
-      // Mark expansion as populated
-      expansion.populated = true;
+      // Mark expansion as crawled
+      expansion.crawled = true;
       expansion.save(this.success);
     });
   };
