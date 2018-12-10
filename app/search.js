@@ -120,7 +120,7 @@ module.exports = function(app) {
       }).reduce(function(a, b) { return a.concat(b); }, []);
 
       if (params.format) {
-        var format = app.categories.name.formats[params.format];
+        const format = app.categories.name.formats[params.format];
         if (format) terms.push({type: 'formats', obj: format});
       }
 
@@ -152,8 +152,8 @@ module.exports = function(app) {
         }
       });
 
-      var conditions = criteria.length > 0 ? {'$and': criteria} : {};
-      var query = app.models.Card.find(conditions).sort('formats.format', 1);
+      const conditions = criteria.length > 0 ? {'$and': criteria} : {};
+      const query = app.models.Card.find(conditions).sort('formats.format', 1);
       query.limit(20).skip((params.page - 1) * 20).run(function(err, cards) {
         app.models.Card.count(conditions, function(err, total) {
           next.success(cards, total);
