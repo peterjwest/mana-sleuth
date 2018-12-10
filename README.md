@@ -10,7 +10,11 @@ Use quotes to search for specific rules.
 
 ## TODO
 
+ - When searching by expansion, show printing for expansion
+ - Replace promise library
+ - Fix issue with Slaughter Pact et. al duplicate colours
  - Fix subtype detection (un-sets)
+ - Apply legality for current format
  - Add checkbox to exclude un-sets by default
  - Rewrite front-end
  - Better handling of request and save failure
@@ -25,3 +29,4 @@ Use quotes to search for specific rules.
  - Add details to unglued token cards, if applicable
  - Improve matching for punctuation in names, rules
  - Add gatherer name, fix token naming
+ - Crawl rulings
