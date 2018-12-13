@@ -44,6 +44,7 @@ server.get(/^\/?(.*)$/, handleXhr, app.router.decode, function(req, res) {
       var expansions = app.categories.id.Expansion;
       cards.map(function(card) {
         card.printings = card.printings.sort(function(a,b) {
+          if (!a.expansion || !b.expansion) return 0;
           return expansions[b.expansion].released - expansions[a.expansion].released;
         });
         card.objects(app.categories.id);
