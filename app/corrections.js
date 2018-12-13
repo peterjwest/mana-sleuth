@@ -208,6 +208,7 @@ corrections.replacements = {
   // Fixes for cards, predominantly in the unglued/unhinged set and for tokens
   Card: {
     "B.F.M. (Big Furry Monster)": {
+      types: ['Creature'],
       subtypes: ["The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See"],
       rules: [
         "You must play both B.F.M. cards to put B.F.M. into play. "+
@@ -217,11 +218,60 @@ corrections.replacements = {
       flavourText:
         "\"It was big. Really, really big. No, bigger than that. Even bigger. "+
         "Keep going. More. No, more. Look, we're talking krakens and dreadnoughts for jewelry. "+
-        "It was big\"\n-Arna Kennerd, skyknight",
+        "It was big!\"\n-Arna Kennerd, skyknight",
       multipart: {type: 'double'},
+      power: 99,
+      toughness: 99,
+      cmc : 15,
+      cost : "{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}",
       printings: [
         {gathererId: 9780},
+      ]
+    },
+    "B.F.M. (Big Furry Monster, Right Side)": {
+      types: ['Creature'],
+      subtypes: ["The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See"],
+      rules: [
+        "You must play both B.F.M. cards to put B.F.M. into play. "+
+        "If either B.F.M. card leaves play, sacrifice the other.",
+        "B.F.M. can be blocked only by three or more creatures."
+      ],
+      flavourText:
+        "\"It was big. Really, really big. No, bigger than that. Even bigger. "+
+        "Keep going. More. No, more. Look, we're talking krakens and dreadnoughts for jewelry. "+
+        "It was big!\"\n-Arna Kennerd, skyknight",
+      multipart: {type: 'double'},
+      printings: [
         {gathererId: 9844},
+      ]
+    },
+    'Curse of the Fire Penguin': {
+      types: ['Enchantment'],
+      subtypes: [],
+      rules: [
+        "Curse of the Fire Penquin consumes and confuses enchanted creature."+
+        "(Turn this card upside down and cover the text box of enchanted creature with this card)"
+      ],
+      power: '',
+      toughness: '',
+      printings: [
+        {
+          gathererId : 73956,
+          artist : 'Matt Thompson',
+          rarity :'Rare',
+          expansion : 'Unhinged'
+        }
+      ]
+    },
+    'Curse of the Fire Penguin Creature': {
+      name: 'Curse of the Fire Penguin (Creature)',
+      printings: [
+        {
+          gathererId : 73956,
+          artist : 'Matt Thompson',
+          rarity :'Rare',
+          expansion : 'Unhinged'
+        }
       ]
     },
     "Look at Me, I'm R&D": {
