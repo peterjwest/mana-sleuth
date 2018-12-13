@@ -1,5 +1,7 @@
+const { identity, keyBy } = require('lodash');
+
 const async = require('../util/async');
-const util = require('../util/util');
+const { alternate } = require('../util/util');
 
 module.exports = function(app) {
   var cards = {};
@@ -51,7 +53,7 @@ module.exports = function(app) {
 
       async.promise(function() {
         var next = this;
-        var altName = util.alternate(self.details.multipart.cards, self.cards[0].name);
+        var altName = alternate(self.details.multipart.cards, self.cards[0].name);
         app.models.Card.findOne({name: altName}, function(err, card) { next.success(card); });
       })
 
@@ -72,7 +74,6 @@ module.exports = function(app) {
     // Apply corrections and substitute database references
     .then(function() {
       self.details.cards.map(function(card) {
-
         // Applying replacements
         var applyReplacements = function(item, corrections) {
           for (i in corrections) {
@@ -115,7 +116,7 @@ module.exports = function(app) {
 
     // Prepare details and push cards
     .then(function() {
-      self.details.name = util.hash(self.details.cards, util.key('name'));
+      self.details.name = keyBy(self.details.cards, 'name');
       this.success(self.cards);
     })
 
@@ -124,10 +125,10 @@ module.exports = function(app) {
       card.set(self.details.name[card.name]);
       card.colourCount = card.colours.length;
 
-      //Set multipart details
+      // Set multipart details
       if (self.details.multipart) {
         card.set({multipart: {
-          card: util.alternate(self.cards, card)._id,
+          card: alternate(self.cards, card)._id,
           type: card.multipart.type || self.details.multipart.type
         }});
       }
@@ -135,7 +136,7 @@ module.exports = function(app) {
     })
 
     .then(function(errors) {
-      if (errors.filter(util.self).length) {
+      if (errors.filter(identity).length) {
         return console.log("Error: Couldn't save card ("+errors.join(", ")+")");
       }
       console.log("Updated");

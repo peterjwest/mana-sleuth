@@ -3,8 +3,7 @@ const less = require('connect-lesscss');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
-var config = require('./config');
-const util = require('./util/util');
+const config = require('./config');
 const modelGenerator = require('./util/model_generator');
 
 const connection = mongoose.createConnection(config.databases.app);
@@ -63,7 +62,6 @@ server.get(/^\/?(.*)$/, handleXhr, app.router.decode, function(req, res) {
       formats: formats,
       categories: app.categories,
       app: app,
-      util: util,
       request: req,
     });
   });

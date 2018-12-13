@@ -1,5 +1,6 @@
+const { keyBy, clone } = require('lodash');
+
 const async = require('../util/async');
-const util = require('../util/util');
 
 module.exports = function(app) {
   const categories = {data: {}};
@@ -26,7 +27,7 @@ module.exports = function(app) {
     return async.promise(function() {
       const next = this;
       app.models.Cache.sync({name: 'categories'}, function(err, cache) {
-        cache.set({name: 'categories', value: util.clone(categories.data)});
+        cache.set({name: 'categories', value: clone(categories.data)});
         cache.save(next.success);
       });
     });
@@ -38,7 +39,7 @@ module.exports = function(app) {
     for (const key in keys) {
       categories[keys[key]] = {};
       for (const category in categories.data) {
-        categories[keys[key]][category] = util.hash(categories.data[category], util.key(key));
+        categories[keys[key]][category] = keyBy(categories.data[category], key);
       }
     }
   };
@@ -97,7 +98,7 @@ module.exports = function(app) {
 
     if (additions) data = additions.concat(data);
     if (removals) {
-      const removalHash = util.hash(removals, util.key('name'));
+      const removalHash = keyBy(removals, 'name');
       data = data.filter(function(item) { return !removalHash[item.name]; });
     }
     if (replacements) {

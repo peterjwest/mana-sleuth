@@ -1,4 +1,6 @@
-const util = require('../util/util');
+const { identity } = require('lodash');
+
+const { regexEscape } = require('../util/util');
 
 module.exports = function(app) {
   const search = {};
@@ -61,7 +63,7 @@ module.exports = function(app) {
       const tokens = searchQuery ? searchQuery.match(/[^"]+|["]/g) : [];
 
       let quote = false;
-      tokens.map(trim).filter(util.self).map(function(token) {
+      tokens.map(trim).filter(identity).map(function(token) {
         if (token === quote) quote = false;
         else if (token.match("\"")) quote = token;
         else {
@@ -132,7 +134,7 @@ module.exports = function(app) {
       const criteria = [];
       terms.map(function(term) {
         if (term.type === 'rules') {
-          const match = new RegExp("\\b"+util.regEscape(term.term)+"\\b", "i");
+          const match = new RegExp("\\b" + regexEscape(term.term) + "\\b", "i");
           criteria.push({$or: [{rules: match}, {name: match}]});
         }
         else if (term.type === 'keyword') {

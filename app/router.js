@@ -1,4 +1,4 @@
-const util = require('../util/util.js');
+const { map } = require('lodash');
 
 const router = {};
 
@@ -15,7 +15,7 @@ router.decode = function(req, res, next) {
     if (params[i]) data[arg] = params[i];
   });
 
-  req.route.data = util.merge(req.query, data);
+  req.route.data = { ...req.query, ...data };
 
   next();
 };
@@ -29,15 +29,14 @@ router.encode = function(route) {
     }
   });
 
-  const query = util.dehash(route.data, function(value, name) { return name+"="+util.cast("string", value).replace(/\s/g, "+"); }).join("&");
+  const query = map(route.data, (value, name) => name + "=" + String(value).replace(/\s/g, "+")).join("&");
   if (query) url += "?" + query;
 
   return url;
 };
 
 router.url = function(route, params) {
-  const data = util.merge(route.data, params);
-  return router.encode(route, data);
+  return router.encode({route, data: { ...route.data, ...params }});
 };
 
 module.exports = router;

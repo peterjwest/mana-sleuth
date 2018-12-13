@@ -1,7 +1,8 @@
 const cheerio = require("cheerio");
+const { values, zipObject } = require('lodash');
 
 const cachedRequest = require('../../util/cached_request');
-const util = require('../../util/util');
+const { alternate } = require('../../util/util');
 const router = require('./router.js');
 
 var scraper = {};
@@ -107,7 +108,7 @@ scraper.getExpansionCards = function(expansion, success, page, existingCards) {
       scraper.getExpansionCards(expansion, success, page + 1, cards);
     }
     else {
-      success(util.values(cards));
+      success(values(cards));
     }
   });
 };
@@ -139,9 +140,9 @@ scraper.getCardDetails = function(id, success) {
     // Iterate through details
     var cards = details.toArray().map(function(self) {
       var rows = $(self).find(".rightCol .row");
-      var strength = util.zip(
+      var strength = zipObject(
+        ["power", "toughness"],
         text(find(rows, /P\/T/i)).split(/ \/ /),
-        ["power", "toughness"]
       );
 
       var card = {
@@ -160,9 +161,9 @@ scraper.getCardDetails = function(id, success) {
         complete: true
       };
 
-      var categories = util.zip(
+      var categories = zipObject(
+        ["types", "subtypes"],
         text(find(rows, /types/i)).split(/\s+—\s+/),
-        ["types", "subtypes"]
       );
       card.types = (categories.types || "").split(/\s+/);
       card.subtypes = (categories.subtypes || "").split(/\s+/);
@@ -178,7 +179,7 @@ scraper.getCardDetails = function(id, success) {
       if (rules.match(/flip/i)) multipart.type = 'flip';
       if (rules.match(/partner/i)) multipart.type = 'partner';
       if (rules.match(/meld/i)) multipart.type = 'meld';
-      multipart.cards = cards.map(util.key('name'));
+      multipart.cards = cards.map((card) => card.name);
     }
 
     // Detect split cards
@@ -186,7 +187,7 @@ scraper.getCardDetails = function(id, success) {
     if (name.match(/\/\//)) {
       multipart = {type: 'split'};
       var names = name.split(/\s*\/\/\s*/);
-      multipart.cards = [cards[0].name, util.alternate(names, cards[0].name)];
+      multipart.cards = names;
     }
 
     // Get card foramts
