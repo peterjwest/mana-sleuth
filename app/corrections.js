@@ -283,6 +283,29 @@ corrections.replacements = {
     "Little Girl": {
       cost: "{1/2W}"
     },
+    'Mox Lotus': {
+      rules: [
+        '{Tap}: Add {Infinite}.',
+        '{100}: Add one mana of any color.',
+      ],
+    },
+    'Cheap Ass': {
+      rules: [
+        'Spells you cast cost {½} less to cast.',
+      ],
+    },
+    'Flaccify': {
+      rules: [
+        'Counter target spell unless its controller pays {3}{½}.',
+      ],
+    },
+    'Draco': {
+      rules: [
+        'Domain — This spell costs {2} less to cast for each basic land type among lands you control.',
+        'Flying',
+        'Domain — At the beginning of your upkeep, sacrifice Draco unless you pay {10}. This cost is reduced by {2} for each basic land type among lands you control.',
+      ]
+    },
     "Forest": {rules: []},
     "Mountain": {rules: []},
     "Swamp": {rules: []},
