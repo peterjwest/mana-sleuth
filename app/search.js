@@ -29,6 +29,20 @@ module.exports = function(app) {
             pattern: /^non-?([a-z]+)$/i,
             criteria: function(keyword) {
               const baseKeyword = normalise(keyword[1]);
+              if (baseKeyword === 'permanent') {
+                return { types: {
+                  $in: [
+                    app.categories.name.Type['Instant']._id,
+                    app.categories.name.Type['Sorcery']._id,
+                  ],
+                }};
+              }
+              if (baseKeyword === 'multipart') {
+                return { multipart: { $exists: false }};
+              }
+              if (baseKeyword.match(/^(flip|split|transform|double|partner|meld)$/)) {
+                return { 'multipart.type': { $ne: baseKeyword }};
+              }
               const colour = app.categories.name.Colour[firstUpper(baseKeyword)];
               if (colour) {
                 return {colours: {$nin: [colour._id]}};
@@ -63,6 +77,11 @@ module.exports = function(app) {
               if (strength[1] !== '') criteria['toughness'] = strength[1];
               return criteria;
             }
+          },
+          multipart: { pattern: /^multipart$/i, criteria: () => ({ multipart: { $exists: true }}) },
+          split: {
+            pattern: /^(flip|split|transform|double|partner|meld)$/i,
+            criteria: (keyword) => ({ 'multipart.type': keyword[0] }),
           },
         }
 
