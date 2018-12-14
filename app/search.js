@@ -43,6 +43,13 @@ module.exports = function(app) {
               if (baseKeyword.match(/^(flip|split|transform|double|partner|meld)$/)) {
                 return { 'multipart.type': { $ne: baseKeyword }};
               }
+              if (baseKeyword.match(/^un-?sets?$/i)) {
+                return { 'printings.expansion': { $nin: [
+                  app.categories.name.Expansion.Unglued,
+                  app.categories.name.Expansion.Unhinged,
+                  app.categories.name.Expansion.Unstable,
+                ] }};
+              }
               const colour = app.categories.name.Colour[firstUpper(baseKeyword)];
               if (colour) {
                 return {colours: {$nin: [colour._id]}};
@@ -83,6 +90,13 @@ module.exports = function(app) {
             pattern: /^(flip|split|transform|double|partner|meld)$/i,
             criteria: (keyword) => ({ 'multipart.type': keyword[0] }),
           },
+          unset: { pattern: /^un-?sets?$/i, criteria: () => ({
+            'printings.expansion': { $in: [
+              app.categories.name.Expansion.Unglued,
+              app.categories.name.Expansion.Unhinged,
+              app.categories.name.Expansion.Unstable,
+            ] }
+          }) },
         }
 
         // Splits the search query into terms, splitting quoted and non quoted words
