@@ -21,7 +21,7 @@ router.decode = function(req, res, next) {
 };
 
 router.encode = function(route) {
-  let url = '/'+route.name;
+  let url = '/' + (route.name || '');
   (router.routes[route.route] || []).map(function(arg) {
     if (route.data[arg]) {
       url += '/'+route.data[arg];

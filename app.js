@@ -69,6 +69,6 @@ server.get(/^\/?(.*)$/, handleXhr, app.router.decode, function(req, res) {
 
 server.listen(3000);
 
-// app.categories.update()
-//   .then(app.expansions.populate)
-//   .then(app.cards.update);
+app.categories.update()
+  .then(app.expansions.populate)
+  .then(app.cards.update);
