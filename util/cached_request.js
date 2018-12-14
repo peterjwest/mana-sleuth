@@ -1,4 +1,4 @@
-const request = require('request');
+const request = require('request-promise');;
 const mongoose = require('mongoose');
 
 const modelGenerator = require('./model_generator.js');
@@ -14,23 +14,19 @@ const schemas = {
 
 const models = modelGenerator(connection, schemas);
 
-const requestCache =function(options, fn) {
-  models.Page.sync({url: options.url}, function(err, page) {
-    if (page.unsaved) {
-      request(options, function(error, response, html) {
-        page.url = options.url;
-        page.html = html;
-        page.save(function() {
-          fn(error, response, html);
-        });
-      });
+const cachedRequest = function(options) {
+  return models.Page.findOne({url: options.url})
+  .then((page) => {
+    if (page) {
+      return page.html;
     }
-    else fn(null, {}, page.html);
+    return request(options).then((html) => {
+      page = new models.Page();
+      page.url = options.url;
+      page.html = html;
+      return page.save().then(() => html);
+    });
   });
 };
 
-requestCache.invalidate = function(url, fn) {
-  models.Page.findOne({url: url}).remove(fn);
-};
-
-module.exports = requestCache;
+module.exports = cachedRequest;

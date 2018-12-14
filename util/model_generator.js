@@ -1,13 +1,13 @@
 module.exports = function(connection, schemas) {
-
-  // Sync method for adding/updating models
-  const sync = function(criteria, fn) {
-    const model = this;
-    model.findOne(criteria, function(err, item) {
-      const unsaved = !item;
-      if (unsaved) item = new model();
-      item.unsaved = unsaved;
-      if (fn) fn(err, item);
+  // Find a document by criteria or create a new one
+  const findOrCreate = function(criteria, fn) {
+    const Model = this;
+    return Model.findOne(criteria)
+    .then((document) => {
+      const unsaved = !document;
+      if (unsaved) document = new Model();
+      document.unsaved = unsaved;
+      return document;
     });
   };
 
@@ -15,7 +15,7 @@ module.exports = function(connection, schemas) {
   const models = {};
   for (const name in schemas) {
     models[name] = connection.model(name, schemas[name], name);
-    models[name].sync = sync;
+    models[name].findOrCreate = findOrCreate;
     models[name].modelName = name;
   }
 

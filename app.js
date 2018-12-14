@@ -37,12 +37,11 @@ const handleXhr = function(req, res, next) {
 
 server.get(/^\/?(.*)$/, handleXhr, app.router.decode, function(req, res) {
   req.query.page = req.query.page || 1;
-  app.search.run(req.query).then(function(cards, total) {
-
+  app.search.run(req.query).then((data) => {
     // Maps through cards, adding in references and sorting expansions
-    if (cards) {
+    if (data.cards) {
       var expansions = app.categories.id.Expansion;
-      cards.map(function(card) {
+      data.cards.map(function(card) {
         card.printings = card.printings.sort(function(a,b) {
           if (!a.expansion || !b.expansion) return 0;
           return expansions[b.expansion].released - expansions[a.expansion].released;
@@ -58,8 +57,8 @@ server.get(/^\/?(.*)$/, handleXhr, app.router.decode, function(req, res) {
       layout: !req.xhr,
       title: config.title,
       subtitle: config.subtitle,
-      pager: app.pager(20, total, req.query.page),
-      cards: cards,
+      pager: app.pager(20, data.total, req.query.page),
+      cards: data.cards,
       formats: formats,
       categories: app.categories,
       app: app,

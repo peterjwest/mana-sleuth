@@ -44,7 +44,8 @@ schemas.Card = new Schema({
     card: Schema.ObjectId,
     type: {type: String, match: /^flip|split|transform|double|partner|meld$/}
   },
-  complete: {type: Boolean, default: false}
+  complete: {type: Boolean, default: false},
+  failed: {type: Boolean, default: false}
 });
 schemas.Card.index({'lastUpdated': 1, 'complete': 1});
 schemas.Card.index({'printings.gathererId': 1});
@@ -105,7 +106,7 @@ schemas.Cache = new Schema({
 
 schemas.Card.methods.gathererId = function() {
   const printing = this.printings[0];
-  return printing ? printing.gathererId : false;
+  return printing ? printing.gathererId : undefined;
 };
 
 schemas.Card.methods.objects = function(objects) {
@@ -133,8 +134,8 @@ schemas.Card.methods.has = function(fieldName, name) {
   return found;
 };
 
-schemas.Card.statics.lastUpdated = function() {
-  return this.findOne({complete: false}).sort({lastUpdated: 1});
+schemas.Card.statics.getNext = function() {
+  return this.findOne({complete: false, failed: false}).sort({lastUpdated: 1});
 };
 
 module.exports = schemas;

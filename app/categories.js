@@ -1,6 +1,5 @@
+const Bluebird = require('bluebird');
 const { keyBy, clone } = require('lodash');
-
-const async = require('../util/async');
 
 module.exports = function(app) {
   const categories = {data: {}};
@@ -8,28 +7,25 @@ module.exports = function(app) {
 
   // Get card category collections from the database cache
   categories.get = function() {
-    return async.promise(function() {
-      const next = this;
-      app.models.Cache.findOne({name: 'categories'}, function(err, cache) {
-        categories.types.map(function(category) {
-          const model = app.models[category];
-          categories.data[model.modelName] = cache.value[model.modelName];
+    return (
+      app.models.Cache.findOne({name: 'categories'})
+      .then((cache) => {
+        categories.types.map((categoryType) => {
+          const Model = app.models[categoryType];
+          categories.data[Model.modelName] = cache.value[Model.modelName];
         });
         categories.hash();
-        next.success();
-      });
-    });
+      })
+    );
   };
 
   // Caches categories into a single database entry
   categories.cache = function() {
     console.log("Caching categories");
-    return async.promise(function() {
-      const next = this;
-      app.models.Cache.sync({name: 'categories'}, function(err, cache) {
-        cache.set({name: 'categories', value: clone(categories.data)});
-        cache.save(next.success);
-      });
+    return app.models.Cache.findOrCreate({name: 'categories'})
+    .then((cache) => {
+      cache.set({name: 'categories', value: clone(categories.data)});
+      return cache.save();
     });
   };
 
@@ -48,46 +44,38 @@ module.exports = function(app) {
   categories.update = function() {
     console.log("Updating categories");
 
-    // Gets category names from the scraper
-    return async.promise(function() {
-      app.gatherer.scraper.getCategories(this.success);
-    })
+    return app.gatherer.scraper.getCategories()
 
     // Iterates through different models and saves them
     .then(function(data) {
-      async.map(categories.types, function(category) {
-        const model = app.models[category];
-        let categoryData = data[category].map(function(name) { return {name: name}; });
+      return Bluebird.mapSeries(categories.types, (category) => {
+        const Model = app.models[category];
+        let categoryData = data[category].map((name) => ({ name: name }));
         categoryData = categories.applyCorrections(categoryData, category);
-        categoryData.map(function(item) {
-          item.gathererName = item.name;
-        });
+        categoryData.map((item) => item.gathererName = item.name);
 
         // Save categories
-        categories.data[model.modelName] = [];
-        async.map(categoryData, function(details) {
-          const next = this;
-
-          model.sync({gathererName: details.gathererName}, function(err, item) {
-            categories.data[model.modelName].push(item);
-            item.set(details);
-            item.save(next.success);
-          });
-        }).then(this.success);
-
-      }).then(this.success);
+        categories.data[Model.modelName] = [];
+        return Bluebird.mapSeries(categoryData, (details) => {
+          return (
+            Model.findOrCreate({ gathererName: details.gathererName })
+            .then((item) => {
+              categories.data[Model.modelName].push(item);
+              item.set(details);
+              return item.save();
+            })
+          );
+        });
+      });
     })
 
     // Hash and cache the categories
-    .then(function() {
+    .then(() => {
       categories.hash();
-      categories.cache().then(this.success);
+      return categories.cache();
     })
 
-    .then(function() {
-      console.log("Updated "+categories.types.length+ " categories");
-      this.success();
-    });
+    .then(() => void console.log("Updated "+categories.types.length+ " categories"));
   };
 
   // Applies any neccessary corrections to a category

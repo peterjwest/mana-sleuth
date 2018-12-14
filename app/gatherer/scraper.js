@@ -1,45 +1,34 @@
 const cheerio = require("cheerio");
-const { values, zipObject } = require('lodash');
 
 const cachedRequest = require('../../util/cached_request');
-const { alternate } = require('../../util/util');
 const router = require('./router.js');
 
 var scraper = {};
 
-// Gets the response of page and gives it to the callback function
-scraper.requestPage = function(url, success) {
-  var tries = 0;
-  var threshold = 3;
-  var attempt = function() {
-    tries++;
-    cachedRequest({url: url}, function (error, response, html) {
-
-      // Checks the response is valid
-      if (html) {
-        var $ = cheerio.load(html);
-        if (!$("title").text().match(/temporarily\s+unavailable/i)) {
-          return success($);
-        }
-      }
-
-      // Request has failed so invalidate the cache
-      if (cachedRequest.invalidate) {
-        return cachedRequest.invalidate(url, function() {
-          if (tries < threshold) attempt();
-        });
-      }
-
-      // Tries again if within the threshold
-      if (tries < threshold) attempt();
-      else console.log("Error: Cannot access site");
-    });
-  };
-  attempt();
+const rarities = {
+  L: 'Land',
+  C: 'Common',
+  U: 'Uncommon',
+  R: 'Rare',
+  M: 'Mythic Rare',
+  P: 'Promo',
+  S: 'Special'
 };
 
-scraper.getCategories = function(success) {
-  scraper.requestPage(router.categories(), function($) {
+// Gets the response of page and gives it to the callback function
+scraper.requestPage = function(url, retries = 3) {
+  return cachedRequest({url: url}).then((html) => cheerio.load(html))
+  .catch(() => {
+    if (retries > 0) {
+      return scraper.requestPage(url, retries - 1);
+    } else {
+      throw new Error(`Cannot access URL: "${url}"`);
+    }
+  })
+};
+
+scraper.getCategories = function() {
+  return scraper.requestPage(router.categories()).then(($) => {
     var conditions = $(".advancedSearchTable tr");
 
     var find = function(search, negativeSearch) {
@@ -53,7 +42,7 @@ scraper.getCategories = function(success) {
       });
     };
 
-    success({
+    return {
       Colour: find(/color/i),
       Expansion: find(/set|expansion/i),
       Format: find(/format/i),
@@ -62,59 +51,45 @@ scraper.getCategories = function(success) {
       Subtype: find(/subtype/i),
       Rarity: find(/rarity/i),
       Legality: []
-    });
+    };
   });
 };
 
-scraper.getExpansionCards = function(expansion, success, page, existingCards) {
-  if (existingCards === undefined) existingCards = {};
-  if (page === undefined) page = 1;
+scraper.getExpansionCards = function(expansion, page = 1, existingCards = []) {
   console.log("Requesting page " + page);
-  scraper.requestPage(router.cards(expansion, page), function($) {
-    var cards = existingCards;
-    $(".cardItem").each(function() {
-      var $card = $(this);
-      var name = $card.find(".name").text();
-      var card = cards[name] || {printings: []};
-      cards[name] = card;
-
-      card.lastUpdated = new Date();
-      card.name = name;
-      card.colours = $card.find(".color").text().split("/");
-
-      // Map rarity letters to words
-      var rarities = {
-        L: 'Land',
-        C: 'Common',
-        U: 'Uncommon',
-        R: 'Rare',
-        M: 'Mythic Rare',
-        P: 'Promo',
-        S: 'Special'
+  return scraper.requestPage(router.cards(expansion, page)).then(($) => {
+    const cards = existingCards.concat($(".cardItem").map(function() {
+      const cardElement = $(this);
+      const name = cardElement.find(".name").text();
+      return {
+        lastUpdated: new Date(),
+        name: name,
+        colours: cardElement.find(".color").text().split("/"),
+        printings: [{
+          gathererId: cardElement.find(".nameLink").attr("href").match(/multiverseid=(\d+)/i)[1],
+          artist: cardElement.find(".artist").text(),
+          rarity: rarities[cardElement.find(".rarity").text()]
+        }],
       };
+    }).get());
 
-      card.printings.push({
-        gathererId: $card.find(".nameLink").attr("href").match(/multiverseid=(\d+)/i)[1],
-        artist: $card.find(".artist").text(),
-        rarity: rarities[$card.find(".rarity").text()]
-      });
-    });
-
-    const hasNextPage = $('.pagingcontrols a')
-    .filter((index, element) => parseInt($(element).text(), 10) === page + 1)
-    .length > 0;
+    const hasNextPage = (
+      $('.pagingcontrols a')
+      .filter((index, element) => parseInt($(element).text(), 10) === page + 1)
+      .length > 0
+    );
 
     if (hasNextPage) {
-      scraper.getExpansionCards(expansion, success, page + 1, cards);
+      return scraper.getExpansionCards(expansion, page + 1, cards);
     }
     else {
-      success(values(cards));
+      return cards;
     }
   });
 };
 
-scraper.getCardDetails = function(id, success) {
-  scraper.requestPage(router.card(id), function($) {
+scraper.getCardDetails = function(id) {
+  return scraper.requestPage(router.card(id)).then(($) => {
     var cards = [];
     var multipart = false;
     var details = $(".cardDetails");
@@ -139,13 +114,11 @@ scraper.getCardDetails = function(id, success) {
 
     // Iterate through details
     var cards = details.toArray().map(function(self) {
-      var rows = $(self).find(".rightCol .row");
-      var strength = zipObject(
-        ["power", "toughness"],
-        text(find(rows, /P\/T/i)).split(/ \/ /),
-      );
+      const rows = $(self).find(".rightCol .row");
+      const [power, toughness] = text(find(rows, /P\/T/i)).split(/ \/ /);
+      const [types, subtypes] = text(find(rows, /types/i)).split(/\s+—\s+/);
 
-      var card = {
+      return {
         lastUpdated: new Date(),
         name: text(find(rows, /name/i)),
         cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
@@ -153,33 +126,24 @@ scraper.getCardDetails = function(id, success) {
         rules: find(rows, /text|rules/i, /flavor text/i).children().toArray()
           .map(function(self) { return text($(self)); })
           .filter(function(rule) { return rule; }),
-        power: strength.power || '',
-        toughness: strength.toughness || '',
+        power: power || '',
+        toughness: toughness || '',
+        types: (types || "").split(/\s+/),
+        subtypes: (subtypes || "").split(/\s+/),
         loyalty: text(find(rows, /loyalty/i)),
         flavourText: text(find(rows, /flavor text/i)),
         watermark: text(find(rows, /watermark/i)),
-        complete: true
       };
-
-      var categories = zipObject(
-        ["types", "subtypes"],
-        text(find(rows, /types/i)).split(/\s+—\s+/),
-      );
-      card.types = (categories.types || "").split(/\s+/);
-      card.subtypes = (categories.subtypes || "").split(/\s+/);
-
-      return card;
     });
 
     // Detect flip and transform cards
     if (cards.length > 1) {
-      multipart = {type: 'unknown'};
       var rules = find(details.find(".rightCol .row"), /text|rules/i).text();
+      multipart = { type: 'unknown', cards: cards.map((card) => card.name) };
       if (rules.match(/transform/i)) multipart.type = 'transform';
       if (rules.match(/flip/i)) multipart.type = 'flip';
       if (rules.match(/partner/i)) multipart.type = 'partner';
       if (rules.match(/meld/i)) multipart.type = 'meld';
-      multipart.cards = cards.map((card) => card.name);
     }
 
     // Detect split cards
@@ -191,20 +155,14 @@ scraper.getCardDetails = function(id, success) {
     }
 
     // Get card foramts
-    scraper.getCardFormats(id, function(formats) {
-      cards.map(function(card) {
-        card.formats = formats;
-      });
-
-      details = null;
-      $ = null;
-      success({cards: cards, multipart: multipart});
+    return scraper.getCardFormats(id).then((formats) => {
+      return {cardData: cards.map((card) => ({ ...card, formats: formats })), multipart: multipart};
     });
   });
 };
 
-scraper.getCardFormats = function(id, success) {
-  scraper.requestPage(router.printings(id), function($) {
+scraper.getCardFormats = function(id) {
+  return scraper.requestPage(router.printings(id)).then(($) => {
     var formats = $(".cardList").last();
     var cardFormats = [];
 
@@ -227,9 +185,7 @@ scraper.getCardFormats = function(id, success) {
       });
     });
 
-    formats = null;
-    $ = null;
-    success(cardFormats);
+    return cardFormats;
   });
 };
 

@@ -1,4 +1,5 @@
-const async = require('../util/async');
+const Bluebird = require('Bluebird');
+const { identity } = require('lodash');
 
 module.exports = function(app) {
   const expansions = {};
@@ -9,59 +10,60 @@ module.exports = function(app) {
 
     // Find expansions which haven't been marked as crawled
     const uncrawled = app.categories.data.Expansion.filter(function(e) { return !e.crawled; });
-    return async.map(uncrawled, function(expansion) {
-      expansions.populateOne(expansion).then(this.success);
-    })
-    .then(function() {
+    return Bluebird.mapSeries(uncrawled, (expansion) => {
+      return expansions.populateOne(expansion);
+    }).then(function() {
       console.log("Crawled all expansions");
-      this.success();
     });
   };
 
   // This uses the card search list view page to get basic details of cards in an expansion
-  expansions.populateOne = function(expansion, success) {
+  expansions.populateOne = function(expansion) {
     console.log("Finding cards for "+expansion.name);
     const count = {updated: 0, created: 0};
 
-    return async.promise(function() {
-      app.gatherer.scraper.getExpansionCards(expansion.name, this.success);
-    })
+    return (
+      app.gatherer.scraper.getExpansionCards(expansion.name)
+      .then((cards) => {
+        return Bluebird.mapSeries(cards, (cardData) => {
+          return (
+            app.models.Card.findOrCreate({name: cardData.name})
+            .then((card) => {
+              // TODO: Count these better
+              count[card.unsaved ? 'created' : 'updated']++;
 
-    // Iterate through each card
-    .map(function(details) {
-      const next = this;
-      app.models.Card.sync({name: details.name}, function(err, card) {
-        count[card.unsaved ? 'created' : 'updated']++;
+              // Substitute colour references
+              cardData.colours = (
+                cardData.colours
+                .map((colour) => app.categories.gathererName.Colour[colour])
+                .filter(identity)
+              );
 
-        // Substitute colour references
-        details.colours = details.colours.map(function(colour) {
-          return app.categories.gathererName.Colour[colour];
-        }).filter(function(colour) { return colour; });
+              // Populate printing
+              cardData.printings = cardData.printings.map((printing) => {
+                var replacement = app.corrections.replacements.Rarity[printing.rarity];
+                if (replacement) printing.rarity = replacement.rarity;
 
-        // Populate printing
-        details.printings = details.printings.map(function(printing) {
-          var replacement = app.corrections.replacements.Rarity[printing.rarity];
-          if (replacement) printing.rarity = replacement.rarity;
+                printing.rarity = app.categories.gathererName.Rarity[printing.rarity];
+                printing.expansion = expansion._id;
+                return printing;
+              });
 
-          printing.rarity = app.categories.gathererName.Rarity[printing.rarity];
-          printing.expansion = expansion._id;
-          return printing;
+              // Add to existing printings
+              cardData.printings = card.printings.concat(cardData.printings);
+
+              card.set(cardData);
+              return card.save();
+            })
+          );
         });
-
-        // Add to existing printings
-        details.printings = card.printings.concat(details.printings);
-
-        card.set(details);
-        card.save(next.success);
-      });
-    })
-    .then(function() {
-      console.log("Created "+count.created+" cards, updated "+count.updated+" cards");
-
-      // Mark expansion as crawled
-      expansion.crawled = true;
-      expansion.save(this.success);
-    });
+      })
+      .then(() => {
+        console.log("Created "+count.created+" cards, updated "+count.updated+" cards");
+        expansion.crawled = true;
+        return expansion.save();
+      })
+    );
   };
 
   return expansions;

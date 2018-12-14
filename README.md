@@ -11,7 +11,6 @@ Use quotes to search for specific rules.
 ## TODO
 
  - When searching by expansion, show printing for expansion
- - Replace promise library
  - Fix issue with Slaughter Pact et. al duplicate colours
  - Fix subtype detection (un-sets)
  - Apply legality for current format

@@ -5,6 +5,7 @@
   "license": "MIT",
   "version": "0.0.1",
   "dependencies": {
+    "bluebird": "^3.5.3",
     "body-parser": "^1.18.3",
     "cheerio": "^0.22.0",
     "connect-lesscss": "^0.2.0",
@@ -12,7 +13,8 @@
     "lodash": "^4.17.11",
     "mongoose": "^5.3.15",
     "pug": "^2.0.3",
-    "request": "^2.88.0"
+    "request": "^2.88.0",
+    "request-promise": "^4.2.2"
   },
   "engines": {
     "node": ">=8"
