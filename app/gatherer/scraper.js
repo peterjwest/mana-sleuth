@@ -1,4 +1,5 @@
 const cheerio = require("cheerio");
+const { uniq } = require('lodash');
 
 const cachedRequest = require('../../util/cached_request');
 const router = require('./router.js');
@@ -64,7 +65,7 @@ scraper.getExpansionCards = function(expansion, page = 1, existingCards = []) {
       return {
         lastUpdated: new Date(),
         name: name,
-        colours: cardElement.find(".color").text().split("/"),
+        colours: uniq(cardElement.find(".color").text().split("/")),
         printings: [{
           gathererId: cardElement.find(".nameLink").attr("href").match(/multiverseid=(\d+)/i)[1],
           artist: cardElement.find(".artist").text(),
