@@ -10,8 +10,10 @@ Use quotes to search for specific rules.
 
 ## TODO
 
- - When searching by expansion, show printing for expansion
- - Fix issue with Slaughter Pact et. al duplicate colours
+ - Fix multipart cards
+ - Fix Rowan Kenrith / Will Kenrith
+ - Invalidate request cache in a timely manner
+ - When searching by expansion, show printing for that expansion
  - Fix subtype detection (un-sets)
  - Apply legality for current format
  - Add checkbox to exclude un-sets by default
