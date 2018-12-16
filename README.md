@@ -10,24 +10,22 @@ Use quotes to search for specific rules.
 
 ## TODO
 
- - Fix multipart cards
- - Fix Rowan Kenrith / Will Kenrith
+ - Add card numbers
+ - Make artist table
+ - Implement card removals correction
+ - Replace colour count with colours array query
+ - Add rules for basic lands
+ - Fix Who // What // When // Where // Why
  - Invalidate request cache in a timely manner
  - When searching by expansion, show printing for that expansion
- - Fix subtype detection (un-sets)
  - Apply legality for current format
  - Add checkbox to exclude un-sets by default
  - Rewrite front-end
- - Better handling of request and save failure
  - Save block/expansion relationships
  - Store images on S3
- - Fix fixture cards overwriting printings
  - Fix flavour text missing newlines
  - Mark un-set cards and remove from search
- - Update corrections to use a standard, closure format
  - Mark tokens and remove from search
  - Support multipart cards on frontend
- - Add details to unglued token cards, if applicable
  - Improve matching for punctuation in names, rules
- - Add gatherer name, fix token naming
  - Crawl rulings
