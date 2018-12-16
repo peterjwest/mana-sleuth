@@ -23,7 +23,7 @@ module.exports = function(app) {
     const count = {updated: 0, created: 0};
 
     return (
-      app.gatherer.scraper.getExpansionCards(expansion.name)
+      app.gatherer.scraper.getExpansionCards(expansion.gathererName)
       .then((cards) => {
         return Bluebird.mapSeries(cards, (cardData) => {
           return (
