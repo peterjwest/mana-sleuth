@@ -4,54 +4,23 @@ const corrections = {};
 // These are additions for categories (e.g. type, subtype) not included in the gatherer database
 corrections.additions = {
   Type: [
-    {name: "Token", genuine: true},
-    {name: "Eaturecray", genuine: false}
+    {name: "Token"},
+    {name: "Eaturecray"},
+    {name: "Host"}
   ],
   Subtype: [
-    {name: "The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See", genuine: false},
-    {name: "Donkey", genuine: false},
-    {name: "Lord", genuine: false},
-    {name: "Igpay", genuine: false},
-    {name: "Townsfolk", genuine: false},
-    {name: "Chicken", genuine: false},
-    {name: "Gamer", genuine: false},
-    {name: "Clamfolk", genuine: false},
-    {name: "Elves", genuine: false},
-    {name: "Hero", genuine: false},
-    {name: "Bureaucrat", genuine: false},
-    {name: "Goblins", genuine: false},
-    {name: "Mime", genuine: false},
-    {name: "Cow", genuine: false},
-    {name: "Child", genuine: false},
-    {name: "Lady of Proper Etiquette", genuine: false},
-    {name: "Waiter", genuine: false},
-    {name: "Paratrooper", genuine: false},
-    {name: "Designer", genuine: false},
-    {name: "Ship", genuine: false},
-    {name: "Mummy", genuine: false},
-    {name: "Gus", genuine: false}
+    {name: "The Biggest, Baddest, Nastiest, Scariest Creature You'll Ever See"},
+    {name: "Lady of Proper Etiquette"},
   ],
   Legality: [
     {name: "Legal"},
     {name: "Restricted"},
-    {name: "Banned"}
-  ]
+    {name: "Banned"},
+  ],
 };
 
 // These are removals for invald categories in the gatherer database
 corrections.removals = {
-  Type: [
-    {name: "Plane"},
-    {name: "Ongoing"},
-    {name: "Vanguard"},
-    {name: "Scheme"},
-  ],
-  Subtype: [
-    {name: "Shadowmoor"},
-    {name: "Lorwyn"},
-    {name: "Mirrodin"},
-    {name: "Zendikar"},
-  ],
   Colour: [
     {name: "Colorless"}
   ],
@@ -59,10 +28,28 @@ corrections.removals = {
     {name: "Promo"},
     {name: "Land"}
   ],
-  Expansion: [
-    {name: "Vanguard"},
-    {name: "Promo set for Gatherer"}
-  ]
+  Type: [
+    {name: 'Summon'},
+    {name: 'Scariest'},
+    {name: 'You\'ll'},
+    {name: 'Ever'},
+    {name: 'See'},
+  ],
+  Subtype: [
+    {name: 'The'},
+    {name: 'Biggest,'},
+    {name: 'Baddest,'},
+    {name: 'and/or'},
+    {name: 'Bolas\'s'},
+    {name: 'Lady'},
+    {name: 'of'},
+    {name: 'Proper'},
+    {name: 'Etiquette'},
+    {name: 'ir'},
+  ],
+  Card: [
+    {name: 'Curse of the Fire Penguin Creature'},
+  ],
 };
 
 corrections.replacements = {
@@ -180,23 +167,12 @@ corrections.replacements = {
 
   // These mark popular formats as more important
   Format: {
-    'Standard': {priority: 7},
-    'Commander': {priority: 6},
-    'Extended': {priority: 5},
+    'Standard': {priority: 6},
+    'Commander': {priority: 5},
     'Modern': {priority: 4},
-    'Vintage': {priority: 3},
-    'Legacy': {priority: 2},
-    'Classic': {priority: 1},
-  },
-
-  // These replace outdated types with their modern equivalent
-  Type: {
-    'Interrupt': {types: ['Instant']},
-    'Summon Legend': {types: ['Legendary', 'Creature']},
-    'Summon': {types: ['Creature']},
-    'Enchant Creature': {types: ['Enchantment'], subtypes: ['Aura']},
-    'Enchant Player': {types: ['Enchantment'], subtypes: ['Aura']},
-    '(none)': {types: ['Token']}
+    'Brawl': {priority: 3},
+    'Vintage': {priority: 2},
+    'Legacy': {priority: 1},
   },
 
   // Removes the erratically used 'Land' rarity, and the once used 'Promo' rarity

@@ -86,13 +86,11 @@ schemas.Colour = new Schema({
 schemas.Type = new Schema({
   name: {type: String, index: true, unique: true},
   gathererName: {type: String, index: true, unique: true},
-  genuine: {type: Boolean, default: true}
 });
 
 schemas.Subtype = new Schema({
   name: {type: String, index: true, unique: true},
   gathererName: {type: String, index: true, unique: true},
-  genuine: {type: Boolean, default: true}
 });
 
 schemas.Rarity = new Schema({
