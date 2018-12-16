@@ -16,6 +16,15 @@ const rarities = {
   S: 'Special'
 };
 
+function getMultipartType(name, rules) {
+  if (rules.match(/transform/i)) return 'transform';
+  if (rules.match(/flip/i)) return 'flip';
+  if (rules.match(/partner/i)) return 'partner';
+  if (rules.match(/meld/i)) return 'meld';
+  if (name.match(/\/\//)) return 'split';
+  return 'unknown';
+}
+
 // Gets the response of page and gives it to the callback function
 scraper.requestPage = function(url, retries = 3) {
   return cachedRequest({url: url}).then((html) => cheerio.load(html))
@@ -89,11 +98,9 @@ scraper.getExpansionCards = function(expansion, page = 1, existingCards = []) {
   });
 };
 
-scraper.getCardDetails = function(id) {
+scraper.getCardData = function(name, id) {
   return scraper.requestPage(router.card(id)).then(($) => {
-    var cards = [];
-    var multipart = false;
-    var details = $(".cardDetails");
+    const details = $(".cardDetails");
 
     $.fn.textifyImages = function() {
       this.find("img").each(function() {
@@ -107,14 +114,17 @@ scraper.getCardDetails = function(id) {
     };
 
     var find = function(rows, search, negativeSearch) {
-      return $(rows.toArray().filter(function(self) {
-        var text = $(self).find(".label").text();
-        return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
-      })[0]).find(".value").textifyImages();
+      return (
+        $(rows.toArray().find((self) => {
+          var text = $(self).find(".label").text();
+          return text.match(search) && (!negativeSearch || !text.match(negativeSearch));
+        }))
+        .find(".value").textifyImages()
+      );
     };
 
-    // Iterate through details
-    var cards = details.toArray().map(function(self) {
+    // Iterate through all card details
+    const cards = details.toArray().map(function(self) {
       const rows = $(self).find(".rightCol .row");
       const [power, toughness] = text(find(rows, /P\/T/i)).split(/ \/ /);
       const [types, subtypes] = text(find(rows, /types/i)).split(/\s+—\s+/);
@@ -124,7 +134,7 @@ scraper.getCardDetails = function(id) {
         name: text(find(rows, /name/i)),
         cost: text(find(rows, /mana cost/i, /converted mana cost/i)),
         cmc: parseFloat(text(find(rows, /converted mana cost/i))) || 0,
-        rules: find(rows, /text|rules/i, /flavor text/i).children().toArray()
+        rules: find(rows, /Card text:/i, /flavor text/i).children().toArray()
           .map(function(self) { return text($(self)); })
           .filter(function(rule) { return rule; }),
         power: power || '',
@@ -137,27 +147,30 @@ scraper.getCardDetails = function(id) {
       };
     });
 
-    // Detect flip and transform cards
+    // Detect multipart type
+    let multipart = undefined;
     if (cards.length > 1) {
-      var rules = find(details.find(".rightCol .row"), /text|rules/i).text();
-      multipart = { type: 'unknown', cards: cards.map((card) => card.name) };
-      if (rules.match(/transform/i)) multipart.type = 'transform';
-      if (rules.match(/flip/i)) multipart.type = 'flip';
-      if (rules.match(/partner/i)) multipart.type = 'partner';
-      if (rules.match(/meld/i)) multipart.type = 'meld';
+      const titleName = $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
+      const combinedRules = cards.map((card) => card.rules).join('\n');
+      multipart = {
+        type: getMultipartType(titleName, combinedRules),
+        cards: cards.filter((card) => card.name !== name).map((card) => card.name),
+      };
+
+      if (multipart.type === 'meld') {
+        const match = combinedRules.match(/Melds with (.+)\.|creature named (.+), exile them/);
+        if (match) {
+          multipart.cards.push(match[1] || match[2]);
+        }
+      }
     }
 
-    // Detect split cards
-    var name = $(".contentTitle").text().replace(/^\s+|\s+$/g, "");
-    if (name.match(/\/\//)) {
-      multipart = {type: 'split'};
-      var names = name.split(/\s*\/\/\s*/);
-      multipart.cards = names;
-    }
+    // Select correct card details
+    const cardData = cards.length > 1 ? cards.find((card) => card.name === name) : cards[0];
 
-    // Get card foramts
+    // Get card formats
     return scraper.getCardFormats(id).then((formats) => {
-      return {cardData: cards.map((card) => ({ ...card, formats: formats })), multipart: multipart};
+      return { ...cardData, formats: formats, multipart: multipart, name: name };
     });
   });
 };

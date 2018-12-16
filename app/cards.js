@@ -1,7 +1,50 @@
-const { keyBy } = require('lodash');
 const Bluebird = require('bluebird');
 
-const { alternate } = require('../util/util');
+// Applying replacements
+var applyReplacements = function(item, corrections) {
+  for (i in corrections) {
+    if (typeof corrections[i] == "Object" || typeof corrections[i] == 'Array') {
+      if (typeof corrections[i] == 'Array') item[i] = [];
+      applyReplacements(item[i], corrections[i]);
+    }
+    else item[i] = corrections[i];
+  }
+};
+
+function mapCardData(cardData, categories, replacements) {
+  // Applying card replacement corrections
+  var replacement = replacements.Card[cardData.name];
+  if (replacement) {
+    applyReplacements(cardData, replacement);
+  }
+
+  const printings = cardData.printings && cardData.printings.map((printing) => ({
+    ...printing,
+    rarity: categories.Rarity[printing.rarity],
+    expansion: categories.Expansion[printing.expansion],
+  }));
+
+  // Replace types, subtypes and format names with database references
+  return {
+    ...cardData,
+    types: cardData.types.map((type) => categories.Type[type]).filter((type) => type),
+    subtypes: cardData.subtypes.map((subtype) => categories.Subtype[subtype]).filter((subtype) => subtype),
+    ...(printings ? { printings: printings } : {}),
+    formats: (
+      cardData.formats
+      .map((cardFormat) => {
+        const format = categories.Format[cardFormat.format];
+        const legality = categories.Legality[cardFormat.legality];
+        return {
+          ...cardFormat,
+          format: format ? format._id : undefined,
+          legality: legality ? legality._id : undefined,
+        };
+      })
+      .filter((cardFormat) => cardFormat.format && cardFormat.legality)
+    ),
+  };
+}
 
 module.exports = function(app) {
   var cards = {};
@@ -35,86 +78,70 @@ module.exports = function(app) {
 
   // This uses the card details and printings pages to get the full details of a card
   cards.updateCard = function(card) {
-    const cards = [card];
     return (
-      app.gatherer.scraper.getCardDetails(card.gathererId())
-      .then((details) => {
-        if (!details.multipart) return details;
+      app.gatherer.scraper.getCardData(card.name, card.gathererId())
+      .then((rawCardData) => {
+        const cardData = mapCardData(rawCardData, app.categories.gathererName, app.corrections.replacements);
 
-        var altName = alternate(details.multipart.cards, details.cardData[0].name);
-        return app.models.Card.findOne({ name: altName }).then((card) => {
-          console.log("Updating " + card.name + " (multipart)");
-          cards.push(card);
-          return details;
-        });
+        if (!cardData.multipart) {
+          return [{ data: cardData, card: card }];
+        }
+
+        return (
+          Bluebird.mapSeries(cardData.multipart.cards, (name) => {
+            return (
+              app.models.Card.findOne({ name: name })
+              .then((multipartCard) => {
+                console.log(`Updating ${multipartCard.name} (multipart of ${card.name})`);
+                return (
+                  app.gatherer.scraper.getCardData(multipartCard.name, multipartCard.gathererId())
+                  .then((rawCardData) => {
+                    const cardData = mapCardData(rawCardData, app.categories.gathererName, app.corrections.replacements);
+                    return { data: cardData, card: multipartCard };
+                  })
+                );
+              })
+            );
+          })
+          .then((multipartCardData) => [{ data: cardData, card: card }, ...multipartCardData])
+        );
       })
-      .then((details) => {
-        return {
-          ...details,
-          cardData: details.cardData.map((card) => {
-            // Applying replacements
-            var applyReplacements = function(item, corrections) {
-              for (i in corrections) {
-                if (typeof corrections[i] == "Object" || typeof corrections[i] == 'Array') {
-                  if (typeof corrections[i] == 'Array') item[i] = [];
-                  applyReplacements(item[i], corrections[i]);
-                }
-                else item[i] = corrections[i];
-              }
-            };
-
-            // Applying type replacement corrections
-            var type = card.types.join(" ");
-            var replacement = app.corrections.replacements.Type[type];
-            if (replacement !== null) applyReplacements(card, replacement);
-
-            // Applying card replacement corrections
-            var replacement = app.corrections.replacements.Card[card.name];
-            if (replacement) applyReplacements(card, replacement);
-
-            card.types = card.types.map(function(type) {
-              return app.categories.gathererName.Type[type];
-            }).filter(function(type) { return type; });
-
-            card.subtypes = card.subtypes.map(function(subtype) {
-              return app.categories.gathererName.Subtype[subtype];
-            }).filter(function(subtype) { return subtype; });
-
-            card.formats = card.formats.filter(function(cardFormat) {
-              var format = app.categories.gathererName.Format[cardFormat.format];
-              var legality = app.categories.gathererName.Legality[cardFormat.legality];
-              cardFormat.format = (format || {})._id;
-              cardFormat.legality = (legality || {})._id;
-              return cardFormat.format && cardFormat.legality;
-            });
-
-            return card;
-          }),
-        };
-      })
-      .then((details) => {
-        const cardDataByName = keyBy(details.cardData, 'name');
-        return Bluebird.mapSeries(cards, (card) => {
-          card.set(cardDataByName[card.name]);
-          card.colourCount = card.colours.length;
-          card.complete = true;
-
-          // Set multipart details
-          if (details.multipart) {
-            card.multipart = {
-              card: alternate(cards, card.name)._id,
-              type: card.multipart.type || details.multipart.type,
-            };
+      // Map multipart cards to database references
+      .then((cardDetails) => {
+        return cardDetails.map(({ card, data }) => {
+          if (!data.multipart) {
+            return { card, data };
           }
 
-          return card.save();
+          const multipartCards = data.multipart.cards.map((cardName) => {
+            const cardMatch = cardDetails.find(({ data }) => data.name === cardName);
+            return cardMatch ? cardMatch.card._id : undefined;
+          });
+
+          return {
+            card: card,
+            data: { ...data, multipart: { ...data.multipart, cards: multipartCards }},
+          };
         });
       })
-
+      .then((cardDetails) => {
+        return Bluebird.mapSeries(cardDetails, ({ card, data }) => {
+          card.set(data);
+          if (!data.multipart) {
+            card.multipart = undefined;
+          }
+          card.colourCount = card.colours.length;
+          card.complete = true;
+          return card.save();
+        })
+        .catch((error) => {
+          const ids = cardDetails.map(({ card }) => card._id);
+          return app.models.Card.updateMany({ _id: { $in: ids }}, { $set: { complete: false, failed: true } })
+          .then(() => { throw error; });
+        });
+      })
       .catch((error) => {
         console.log(`Could not process "${card.name}": ${error}`);
-        card.failed = true;
-        return card.save();
       })
     );
   };

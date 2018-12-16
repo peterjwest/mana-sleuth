@@ -23,6 +23,12 @@ schemas.CardFormat = new Schema({
   legality: Schema.ObjectId
 });
 
+// To make a nested object required, use a single nested schema
+var MultipartSchema = new Schema({
+  cards: [Schema.ObjectId],
+  type: {type: String, match: /^flip|split|transform|double|partner|meld$/}
+});
+
 schemas.Card = new Schema({
   name: {type: String, index: true},
   power: {type: String, match: /^\d*|\*$/},
@@ -41,8 +47,8 @@ schemas.Card = new Schema({
   printings: [schemas.Printing],
   formats: [schemas.CardFormat],
   multipart: {
-    card: Schema.ObjectId,
-    type: {type: String, match: /^flip|split|transform|double|partner|meld$/}
+    type: MultipartSchema,
+    required: false,
   },
   complete: {type: Boolean, default: false},
   failed: {type: Boolean, default: false}
@@ -135,7 +141,7 @@ schemas.Card.methods.has = function(fieldName, name) {
 };
 
 schemas.Card.statics.getNext = function() {
-  return this.findOne({complete: false, failed: false}).sort({lastUpdated: 1});
+  return this.findOne({ complete: false, failed: false }).sort({lastUpdated: 1});
 };
 
 module.exports = schemas;

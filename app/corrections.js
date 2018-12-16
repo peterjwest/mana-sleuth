@@ -219,14 +219,17 @@ corrections.replacements = {
         "\"It was big. Really, really big. No, bigger than that. Even bigger. "+
         "Keep going. More. No, more. Look, we're talking krakens and dreadnoughts for jewelry. "+
         "It was big!\"\n-Arna Kennerd, skyknight",
-      multipart: {type: 'double'},
+      multipart: {type: 'double', cards: ['B.F.M. (Big Furry Monster, Right Side)']},
       power: 99,
       toughness: 99,
       cmc : 15,
       cost : "{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}{Black}",
-      printings: [
-        {gathererId: 9780},
-      ]
+      printings: [{
+        gathererId: 9780,
+        artist: 'Douglas Shuler',
+        rarity :'Rare',
+        expansion : 'Unglued',
+      }],
     },
     "B.F.M. (Big Furry Monster, Right Side)": {
       types: ['Creature'],
@@ -240,45 +243,45 @@ corrections.replacements = {
         "\"It was big. Really, really big. No, bigger than that. Even bigger. "+
         "Keep going. More. No, more. Look, we're talking krakens and dreadnoughts for jewelry. "+
         "It was big!\"\n-Arna Kennerd, skyknight",
-      multipart: {type: 'double'},
-      printings: [
-        {gathererId: 9844},
-      ]
+      multipart: {type: 'double', cards: ['B.F.M. (Big Furry Monster)']},
+      printings: [{
+        gathererId: 9844,
+        artist: 'Douglas Shuler',
+        rarity :'Rare',
+        expansion : 'Unglued',
+      }],
     },
     'Curse of the Fire Penguin': {
       types: ['Enchantment'],
-      subtypes: [],
+      subtypes: ['Aura'],
       rules: [
-        "Curse of the Fire Penquin consumes and confuses enchanted creature."+
-        "(Turn this card upside down and cover the text box of enchanted creature with this card)"
+        "Curse of the Fire Penquin consumes and confuses enchanted creature.",
+        "(Enchanted creature becomes a Penguin with base power and toughness 6/5, loses all abilities, "+
+        "gains trample and \"When this creature dies, return Curse of the Fire Penguin to the battlefield.\")",
       ],
       power: '',
       toughness: '',
-      printings: [
-        {
-          gathererId : 73956,
-          artist : 'Matt Thompson',
-          rarity :'Rare',
-          expansion : 'Unhinged'
-        }
-      ]
-    },
-    'Curse of the Fire Penguin Creature': {
-      name: 'Curse of the Fire Penguin (Creature)',
-      printings: [
-        {
-          gathererId : 73956,
-          artist : 'Matt Thompson',
-          rarity :'Rare',
-          expansion : 'Unhinged'
-        }
-      ]
+      multipart: undefined,
+      printings: [{
+        gathererId : 73956,
+        artist : 'Matt Thompson',
+        rarity :'Rare',
+        expansion : 'Unhinged',
+      }],
     },
     "Look at Me, I'm R&D": {
-      printings: [{artist: 'spork;'}]
+      printings: [{
+        gathererId : 74360,
+        artist: 'spork;',
+        rarity :'Rare',
+        expansion : 'Unhinged',
+      }],
     },
     "Miss Demeanor": {
       subtypes: ["Lady of Proper Etiquette"]
+    },
+    'Old Fogey': {
+      types: ['Creature'],
     },
     "Little Girl": {
       cost: "{1/2W}"
@@ -328,12 +331,12 @@ corrections.replacements = {
     "Minion": {types: ["Token", "Creature"]},
     "Saproling": {types: ["Token", "Creature"]},
     "Elf Warrior": {types: ["Token", "Creature"]},
-    "Soldier token card": {/*name: "Soldier",*/ types: ["Token", "Creature"], subtypes: ["Soldier"]},
-    "Zombie token card": {/*name: "Zombie",*/ types: ["Token", "Creature"], subtypes: ["Zombie"]},
-    "Pegasus token card": {/*name: "Pegasus",*/ types: ["Token", "Creature"], subtypes: ["Pegasus"]},
-    "Sheep token card": {/*name: "Sheep",*/ types: ["Token", "Creature"], subtypes: ["Sheep"]},
-    "Squirrel token card": {/*name: "Squirrel",*/ types: ["Token", "Creature"], subtypes: ["Squirrel"]},
-    "Goblin token card": {/*name: "Goblin",*/ types: ["Token", "Creature"], subtypes: ["Goblin"]}
+    "Soldier token card": {name: "Soldier", types: ["Token", "Creature"], subtypes: ["Soldier"]},
+    "Zombie token card": {name: "Zombie", types: ["Token", "Creature"], subtypes: ["Zombie"]},
+    "Pegasus token card": {name: "Pegasus", types: ["Token", "Creature"], subtypes: ["Pegasus"]},
+    "Sheep token card": {name: "Sheep", types: ["Token", "Creature"], subtypes: ["Sheep"]},
+    "Squirrel token card": {name: "Squirrel", types: ["Token", "Creature"], subtypes: ["Squirrel"]},
+    "Goblin token card": {name: "Goblin", types: ["Token", "Creature"], subtypes: ["Goblin"]}
   }
 };
 
