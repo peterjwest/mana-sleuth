@@ -51,8 +51,9 @@ module.exports = function(app) {
       return Bluebird.mapSeries(categories.types, (category) => {
         const Model = app.models[category];
         let categoryData = data[category].map((name) => ({ name: name }));
-        categoryData = categories.applyCorrections(categoryData, category);
         categoryData.map((item) => item.gathererName = item.name);
+        categoryData = categories.applyCorrections(categoryData, category);
+        categoryData.filter((item) => !item.gathererName).map((item) => item.gathererName = item.name);
 
         // Save categories
         categories.data[Model.modelName] = [];
