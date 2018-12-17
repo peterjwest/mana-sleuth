@@ -13,7 +13,6 @@ Use quotes to search for specific rules.
  - Add card numbers
  - Make artist table
  - Implement card removals correction
- - Replace colour count with colours array query
  - Fix Who // What // When // Where // Why
  - Invalidate request cache in a timely manner
  - When searching by expansion, show printing for that expansion
