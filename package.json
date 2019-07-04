@@ -14,9 +14,15 @@
     "mongoose": "^5.3.15",
     "pug": "^2.0.3",
     "request": "^2.88.0",
-    "request-promise": "^4.2.2"
+    "request-promise": "^4.2.2",
+    "snyk": "^1.189.0"
   },
   "engines": {
     "node": ">=8"
-  }
+  },
+  "scripts": {
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
+  },
+  "snyk": true
 }
